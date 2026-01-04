@@ -5,18 +5,25 @@ from langchain_qdrant import QdrantVectorStore
 from ..core.config import env_config
 from ..models.chat import State
 from ..core.llm_client import llm_client
+from ..db.mem0 import mem0_client
 
 def classify_query(state: State) -> State:
     """
     Makes an LLM call to classify the query as 'NORMAL' | 'RETRIEVAL'.
     """
 
-    SYSTEM_PROMPT = """
+    mem_search = mem0_client.search(query=state.get("user_query"), user_id=state.get("user_id"))
+    user_context = [f"ID: {mem.id}\nMemory: {mem.get("memory")}" for mem in mem_search]
+
+    SYSTEM_PROMPT = f"""
     You are a helpful AI Assistant. You will receive a user query and based on
     the query, return either of the following:
 
     'NORMAL' - If the query is a normal chat query not involving document look-up.
     'RETRIEVAL' - If the query is related to a document.
+
+    You are also provided with a context about the user:
+    {user_context}
 
     Note that the user query might a be text input by the user, or a transcript of their voice query.
 
@@ -49,13 +56,19 @@ def normal_query(state: State) -> State:
     Makes an LLM call to answer the user query.
     """
 
-    SYSTEM_PROMPT = """
+    mem_search = mem0_client.search(query=state.get("user_query"), user_id=state.get("user_id"))
+    user_context = [f"ID: {mem.id}\nMemory: {mem.get("memory")}" for mem in mem_search]
+
+    SYSTEM_PROMPT = f"""
     You are an expert AI Assistant. 
     You will receive a user query and based on the query, return a helpful response.
 
     If you are unable to answer the query or need to perform a web search, use the tavily mcp tool to search for the answer.
 
     Note that the user query might a be text input by the user, or a transcript of their voice query.
+
+    You are also provided with a context about the user:
+    {user_context}
     """
 
     response = llm_client.responses.create(
@@ -72,7 +85,17 @@ def normal_query(state: State) -> State:
         ]
     )
 
-    state["messages"] = {"role": "assistant", "content": response.output[-1].content[-1].text}
+    response_text = response.output[-1].content[-1].text
+
+    mem0_client.add(
+        user_id=state.get("user_id"),
+        messages=[
+            {"role": "user", "content": state.get("user_query")},
+            {"role": "assistant", "content": response_text}
+        ]
+    )
+
+    state["messages"] = {"role": "assistant", "content": response_text}
     return state
 
 def retrieval_query(state: State) -> State:
@@ -107,16 +130,22 @@ def retrieval_query(state: State) -> State:
 
     context = [f"Page Content: {result.page_content}\nPage Label: {result.metadata.get("page_label")}" for result in search_results]
 
+    mem_search = mem0_client.search(query=state.get("user_query"), user_id=state.get("user_id"))
+    user_context = [f"ID: {mem.id}\nMemory: {mem.get("memory")}" for mem in mem_search]
+
     SYSTEM_PROMPT = f"""
     You are an expert AI Assistant. You will receive a user query.
-    You have to answer the query based on the context provided.
+    You have to answer the query based on the document context provided.
 
     Note that the user query might a be text input by the user, or a transcript of their voice query.
 
     If applicable and available, also provide the page number where the answer is found.
     If context not available, try to answer the query based on your general knowledge, else return a helpful message.
 
-    Context:
+    You are also provided with a context about the user:
+    {user_context}
+
+    Document Context:
     {context}
     """
 
@@ -126,12 +155,22 @@ def retrieval_query(state: State) -> State:
         input=state.get("messages"),
     )
 
-    state["messages"] = {"role": "assistant", "content": response.output[-1].content[-1].text}
+    response_text = response.output[-1].content[-1].text
+
+    mem0_client.add(
+        user_id=state.get("user_id"),
+        messages=[
+            {"role": "user", "content": state.get("user_query")},
+            {"role": "assistant", "content": response_text}
+        ]
+    )
+
+    state["messages"] = {"role": "assistant", "content": response_text}
     return state
 
 def generate_answer(state: State) -> State:
     """
     Returns the final answer to the user query.
     """
-    
+
     return state
