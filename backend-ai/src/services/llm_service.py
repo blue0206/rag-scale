@@ -2,6 +2,8 @@ from qdrant_client.models import Filter, FieldCondition, MatchValue
 from typing import Literal
 from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import InMemorySaver
 from ..core.config import env_config
 from ..models.chat import State
 from ..core.llm_client import llm_client
@@ -12,6 +14,7 @@ def classify_query(state: State) -> State:
     Makes an LLM call to classify the query as 'NORMAL' | 'RETRIEVAL'.
     """
 
+    # Search mem0 for user context.
     mem_search = mem0_client.search(query=state.get("user_query"), user_id=state.get("user_id"))
     user_context = [f"ID: {mem.id}\nMemory: {mem.get("memory")}" for mem in mem_search]
 
@@ -30,14 +33,17 @@ def classify_query(state: State) -> State:
     In case you are unable to make out the type of query, return 'NORMAL'.
     """
 
+    # Add user query to messages.
     state["messages"] = {"role": "user", "content": state.get("user_query")}
     
+    # Make LLM call.
     response = llm_client.responses.create(
         model=env_config["GROQ_MODEL"],
         instructions=SYSTEM_PROMPT,
         input=state.get("messages")
     )
 
+    # Update state with query type.
     state["query_type"] = response.output[-1].content[-1].text.strip().upper()
     return state
 
@@ -56,6 +62,7 @@ def normal_query(state: State) -> State:
     Makes an LLM call to answer the user query.
     """
 
+    # Search mem0 for user context.
     mem_search = mem0_client.search(query=state.get("user_query"), user_id=state.get("user_id"))
     user_context = [f"ID: {mem.id}\nMemory: {mem.get("memory")}" for mem in mem_search]
 
@@ -71,6 +78,7 @@ def normal_query(state: State) -> State:
     {user_context}
     """
 
+    # Make LLM call with web search mcp.
     response = llm_client.responses.create(
         model=env_config["GROQ_MODEL"],
         instructions=SYSTEM_PROMPT,
@@ -84,9 +92,10 @@ def normal_query(state: State) -> State:
             },
         ]
     )
-
     response_text = response.output[-1].content[-1].text
 
+    # mem0 handles updating factual, episodic, and semantic memory
+    # about user based on provided messages. 
     mem0_client.add(
         user_id=state.get("user_id"),
         messages=[
@@ -116,6 +125,8 @@ def retrieval_query(state: State) -> State:
         embedding=embeddings
     )
 
+    # Perform vector similarity search with user query and filter by user ID.
+    # This ensures that the search is only performed on the user's documents.
     search_results = vector_db.similarity_search(
         query=state.get("user_query"), 
         filter=Filter(
@@ -128,8 +139,10 @@ def retrieval_query(state: State) -> State:
         )
     )
 
+    # Format search results into context.
     context = [f"Page Content: {result.page_content}\nPage Label: {result.metadata.get("page_label")}" for result in search_results]
 
+    # Search mem0 for user context.
     mem_search = mem0_client.search(query=state.get("user_query"), user_id=state.get("user_id"))
     user_context = [f"ID: {mem.id}\nMemory: {mem.get("memory")}" for mem in mem_search]
 
@@ -154,9 +167,10 @@ def retrieval_query(state: State) -> State:
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
     )
-
     response_text = response.output[-1].content[-1].text
 
+    # mem0 handles updating factual, episodic, and semantic memory
+    # about user based on provided messages. 
     mem0_client.add(
         user_id=state.get("user_id"),
         messages=[
@@ -174,3 +188,21 @@ def generate_answer(state: State) -> State:
     """
 
     return state
+
+workflow = StateGraph(State)
+# Add nodes.
+workflow.add_node("classify_query", classify_query)
+workflow.add_node("normal_query", normal_query)
+workflow.add_node("retrieval_query", retrieval_query)
+workflow.add_node("generate_answer", generate_answer)
+
+# Setup edges.
+workflow.add_edge(START, "classify_query")
+workflow.add_conditional_edges("classify_query", route_query)
+workflow.add_edge("normal_query", "generate_answer")
+workflow.add_edge("retrieval_query", "generate_answer")
+workflow.add_edge("generate_answer", END)
+
+# Setup in-memory checkpoint
+checkpointer = InMemorySaver()
+graph = workflow.compile(checkpointer=checkpointer)
