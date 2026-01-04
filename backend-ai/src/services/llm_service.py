@@ -128,3 +128,10 @@ def retrieval_query(state: State) -> State:
 
     state["messages"] = {"role": "assistant", "content": response.output[-1].content[-1].text}
     return state
+
+def generate_answer(state: State) -> State:
+    """
+    Returns the final answer to the user query.
+    """
+    
+    return state
