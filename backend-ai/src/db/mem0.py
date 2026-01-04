@@ -5,7 +5,7 @@ config = {
     "vector_store": {
         "provider": "qdrant",
         "config": {
-            "collection_name": "mem0_store",
+            "collection_name": env_config["MEM0_COLLECTION_NAME"],
             "host": "localhost",
             "port": 6333,
             "embedding_model_dims": 768

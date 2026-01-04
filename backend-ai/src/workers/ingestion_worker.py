@@ -12,5 +12,5 @@ def process_chunks(chunks: list) -> None:
         documents=chunks,
         embedding=embeddings,
         url="http://localhost:6333",
-        collection_name="file_embeddings"
+        collection_name=env_config["RAG_COLLECTION_NAME"]
     )
