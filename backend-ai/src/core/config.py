@@ -8,6 +8,7 @@ env_config = {
     "NEO4J_URI": os.getenv("NEO4J_URI"),
     "NEO4J_USERNAME": os.getenv("NEO4J_USERNAME"),
     "NEO4J_PASSWORD": os.getenv("NEO4J_PASSWORD"),
+    "TAVILY_API_KEY": os.getenv("TAVILY_API_KEY"),
     "GROQ_MODEL": "openai/gpt-oss-120b",
     "GROQ_BASE_URL": "https://api.groq.com/openai/v1",
     "EMBEDDER_MODEL": "nomic-embed-text",
