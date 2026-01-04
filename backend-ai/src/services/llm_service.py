@@ -1,3 +1,4 @@
+from typing import Literal
 from ..core.config import env_config
 from ..models.chat import State
 from ..core.llm_client import llm_client
@@ -27,4 +28,14 @@ def classify_query(state: State) -> State:
 
     state["query_type"] = response.output[-1].content[-1].text.strip().upper()
     return state
+
+def route_query(state: State) -> Literal["NORMAL", "RETRIEVAL"]:
+    """
+    Routes the query to the appropriate node.
+    """
+
+    if state.get("query_type") == "RETRIEVAL":
+        return "RETRIEVAL"
+    
+    return "NORMAL"
 
