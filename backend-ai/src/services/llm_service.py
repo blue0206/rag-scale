@@ -18,7 +18,7 @@ def classify_query(state: State) -> State:
     'NORMAL' - If the query is a normal chat query not involving document look-up.
     'RETRIEVAL' - If the query is related to a document.
 
-    Note that the user_query might a be text input by the user, or a transcript of their voice query.
+    Note that the user query might a be text input by the user, or a transcript of their voice query.
 
     In case you are unable to make out the type of query, return 'NORMAL'.
     """
@@ -43,6 +43,37 @@ def route_query(state: State) -> Literal["NORMAL", "RETRIEVAL"]:
         return "RETRIEVAL"
     
     return "NORMAL"
+
+def normal_query(state: State) -> State:
+    """
+    Makes an LLM call to answer the user query.
+    """
+
+    SYSTEM_PROMPT = """
+    You are an expert AI Assistant. 
+    You will receive a user query and based on the query, return a helpful response.
+
+    If you are unable to answer the query or need to perform a web search, use the tavily mcp tool to search for the answer.
+
+    Note that the user query might a be text input by the user, or a transcript of their voice query.
+    """
+
+    response = llm_client.responses.create(
+        model=env_config["GROQ_MODEL"],
+        instructions=SYSTEM_PROMPT,
+        input=state.get("messages"),
+        tools=[
+            {
+                "type": "mcp",
+                "server_label": "tavily",
+                "server_url": f"https://mcp.tavily.com/mcp/?tavilyApiKey={env_config["TAVILY_API_KEY"]}",
+                "require_approval": "never",
+            },
+        ]
+    )
+
+    state["messages"] = {"role": "assistant", "content": response.output[-1].content[-1].text}
+    return state
 
 def retrieval_query(state: State) -> State:
     """
@@ -80,8 +111,9 @@ def retrieval_query(state: State) -> State:
     You are an expert AI Assistant. You will receive a user query.
     You have to answer the query based on the context provided.
 
-    If applicable and available, also provide the page number where the answer is found.
+    Note that the user query might a be text input by the user, or a transcript of their voice query.
 
+    If applicable and available, also provide the page number where the answer is found.
     If context not available, try to answer the query based on your general knowledge, else return a helpful message.
 
     Context:
