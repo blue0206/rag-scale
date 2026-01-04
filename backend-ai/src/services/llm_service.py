@@ -4,10 +4,25 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import InMemorySaver
+from langchain_core.runnables import RunnableConfig
 from ..core.config import env_config
 from ..models.chat import State
 from ..core.llm_client import llm_client
 from ..db.mem0 import mem0_client
+
+def chat_llm(user_id: str, user_query: str) -> str:
+    """
+    Invokes the langgraph workflow.
+    """
+
+    config: RunnableConfig = {
+        "configurable": {
+            "thread_id": user_id
+        }
+    }
+
+    result = graph.invoke(State({user_id=user_id, user_query=user_query, messages=[]}), config=config)
+    return result.get("messages")[-1].content
 
 def classify_query(state: State) -> State:
     """
