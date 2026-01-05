@@ -22,3 +22,19 @@ def speech_to_text(filename: str):
         pass
 
     return translation.text
+
+
+def text_to_speech(transcript: str, user_id: str):
+    """
+    This function receives a transcript and a user_id. The transcript is
+    converted to speech and saved as .wav audio file to disk.
+    """
+
+    response = groq_client.audio.speech.create(
+        model="canopylabs/orpheus-v1-english",
+        voice="troy",
+        input=transcript,
+    )
+
+    filename = f"output_{user_id}.wav"
+    response.write_to_file(filename)
