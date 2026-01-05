@@ -1,3 +1,4 @@
+import asyncio
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 from typing import Literal
 from langchain_ollama import OllamaEmbeddings
@@ -5,24 +6,43 @@ from langchain_qdrant import QdrantVectorStore
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_core.runnables import RunnableConfig
+from langchain_core.messages import AIMessageChunk
 from ..core.config import env_config
 from ..models.chat import State
 from ..core.llm_client import llm_client
 from ..db.mem0 import mem0_client
 
 
-def chat_llm(user_id: str, user_query: str) -> str:
+async def stream_llm_response(user_id: str, user_query: str):
     """
-    Invokes the langgraph workflow.
+    Invokes the langgraph workflow and streams the response as SSE.
     """
 
     config: RunnableConfig = {"configurable": {"thread_id": user_id}}
-
-    result = graph.invoke(
-        State({"user_id": user_id, "user_query": user_query, "messages": []}),
-        config=config,
+    initial_state = State(
+        {"user_id": user_id, "user_query": user_query, "messages": []}
     )
-    return result.get("messages")[-1].content
+
+    full_response = ""
+
+    async for chunk in graph.astream(
+        initial_state, config=config, stream_mode="values"
+    ):
+        if (
+            chunk.get("messages")
+            and chunk.get("messages")[-1].get("role") == "assistant"
+        ):
+            latest_message = chunk["messages"][-1].get("content")
+
+            if len(latest_message) > len(full_response):
+                new_message = latest_message[len(full_response) :]
+
+                full_response += new_message
+
+                yield new_message
+                # To be sent as SSE in api endpoint.
+                # f"data: {json.dumps({'type': 'text', 'content': new_message})}\n\n"
+                await asyncio.sleep(0.01)
 
 
 def classify_query(state: State) -> State:
@@ -77,9 +97,10 @@ def route_query(state: State) -> Literal["NORMAL", "RETRIEVAL"]:
     return "NORMAL"
 
 
-def normal_query(state: State) -> State:
+def normal_query(state: State):
     """
-    Makes an LLM call to answer the user query.
+    Makes a streaming LLM call to answer the user query and yeilds response
+    as chunks.
     """
 
     # Search mem0 for user context.
@@ -101,7 +122,7 @@ def normal_query(state: State) -> State:
     """
 
     # Make LLM call with web search mcp.
-    response = llm_client.responses.create(
+    stream = llm_client.responses.create(
         model=env_config["GROQ_MODEL"],
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
@@ -113,8 +134,25 @@ def normal_query(state: State) -> State:
                 "require_approval": "never",
             },
         ],
+        stream=True,
     )
-    response_text = response.output[-1].content[-1].text
+
+    response_text = ""
+    for chunk in stream:
+        if (
+            chunk.output
+            and chunk.output[-1].content
+            and chunk.output[-1].content[-1].text
+        ):
+            response_text += chunk.output[-1].content[-1].text
+
+            updated_messages = state["messages"] + [
+                {"role": "assistant", "content": response_text}
+            ]
+            yield {"messages": updated_messages}
+
+    # Update state messages with final response.
+    state["messages"].append({"role": "assistant", "content": response_text})
 
     # mem0 handles updating factual, episodic, and semantic memory
     # about user based on provided messages.
@@ -126,11 +164,8 @@ def normal_query(state: State) -> State:
         ],
     )
 
-    state["messages"] = {"role": "assistant", "content": response_text}
-    return state
 
-
-def retrieval_query(state: State) -> State:
+def retrieval_query(state: State):
     """
     Converts user query into vector embeddings and performs a vector similarity
     search to retrieve relevant data from vector database to answer the query.
@@ -189,12 +224,29 @@ def retrieval_query(state: State) -> State:
     {context}
     """
 
-    response = llm_client.responses.create(
+    stream = llm_client.responses.create(
         model=env_config["GROQ_MODEL"],
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
+        stream=True,
     )
-    response_text = response.output[-1].content[-1].text
+
+    response_text = ""
+    for chunk in stream:
+        if (
+            chunk.output
+            and chunk.output[-1].content
+            and chunk.output[-1].content[-1].text
+        ):
+            response_text += chunk.output[-1].content[-1].text
+
+            updated_messages = state["messages"] + [
+                {"role": "assistant", "content": response_text}
+            ]
+            yield {"messages": updated_messages}
+
+    # Update state messages with final response.
+    state["messages"].append({"role": "assistant", "content": response_text})
 
     # mem0 handles updating factual, episodic, and semantic memory
     # about user based on provided messages.
@@ -205,9 +257,6 @@ def retrieval_query(state: State) -> State:
             {"role": "assistant", "content": response_text},
         ],
     )
-
-    state["messages"] = {"role": "assistant", "content": response_text}
-    return state
 
 
 workflow = StateGraph(State)
