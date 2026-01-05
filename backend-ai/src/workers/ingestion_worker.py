@@ -2,11 +2,12 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from ..core.config import env_config
 
+embeddings = OllamaEmbeddings(
+    model=env_config["EMBEDDER_MODEL"],
+    base_url="http://localhost:11434"
+)
+
 def process_chunks(chunks: list) -> None:
-    embeddings = OllamaEmbeddings(
-        model=env_config["EMBEDDER_MODEL"],
-        base_url="http://localhost:11434"
-    )
 
     QdrantVectorStore.from_documents(
         documents=chunks,
