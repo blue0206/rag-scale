@@ -6,8 +6,8 @@ redis_client = Redis(
     port=6379
 )
 
-chunking_queue = Queue(
-    name="chunking_queue",
+embedding_queue = Queue(
+    name="embedding_queue",
     connection=redis_client
 )
 

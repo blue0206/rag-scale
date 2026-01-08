@@ -1,7 +1,7 @@
 from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from ..db.redis import chunking_queue
+from ..db.redis import embedding_queue
 from ..workers.ingestion_worker import process_chunks
 
 def load_file(user_id: str, pdf_id: str) -> list:
@@ -9,7 +9,7 @@ def load_file(user_id: str, pdf_id: str) -> list:
     Loads the pdf file from files directory and returns the document.
     """
 
-    path = Path(__file__).parent.parent / "files" / f"{user_id}_{pdf_id}.pdf"
+    path = Path(__file__).parent.parent.parent / "files" / f"{user_id}_{pdf_id}.pdf"
     loader = PyPDFLoader(path)
 
     docs = loader.load()
@@ -43,7 +43,7 @@ def offload_chunks(chunks: list) -> list:
 
     for i in range(0, n, 20):
         chunk_subset = chunks[i:i+20]
-        job = chunking_queue.enqueue(process_chunks, chunk_subset)
+        job = embedding_queue.enqueue(process_chunks, chunk_subset)
         jobs.append(job)
 
     return jobs
