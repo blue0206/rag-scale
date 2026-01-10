@@ -2,7 +2,7 @@ from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from ..db.redis import embedding_queue
-from ..workers.embedding_worker import process_chunks
+from .embedding_worker import process_chunks
 
 def load_file(user_id: str, pdf_id: str) -> list:
     """
