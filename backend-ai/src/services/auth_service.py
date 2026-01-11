@@ -32,6 +32,11 @@ async def register_user(user_data: AuthRequestBody) -> AuthServiceResponse:
 
 
 async def generate_session_token(user_id: UUID) -> str:
+    """
+    This function generates a session token and updates the database with the
+    session token and corresponding user id with expiry time.
+    """
+
     try:
         session_token = secrets.token_hex(32)
         session: SessionInDB = await sessions_collection.insert_one(
@@ -45,3 +50,4 @@ async def generate_session_token(user_id: UUID) -> str:
         return session.token
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
