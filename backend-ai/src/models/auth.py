@@ -15,7 +15,7 @@ class SessionInDB(BaseModel):
     expires_at: datetime
 
 
-class RegisterServiceResponse(BaseModel):
+class AuthServiceResponse(BaseModel):
     user_id: UUID
     username: str
     session_token: str
