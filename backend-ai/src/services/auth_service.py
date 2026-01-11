@@ -2,11 +2,11 @@ import secrets
 from passlib.apps import custom_app_context as pwd_context
 from uuid import uuid4, UUID
 from ..db.mongo import users_collection, sessions_collection
-from models.api import RegisterRequestBody
+from models.api import AuthRequestBody
 from models.auth import UserInDB, SessionInDB, RegisterServiceResponse
 
 
-async def register_user(user_data: RegisterRequestBody) -> RegisterServiceResponse:
+async def register_user(user_data: AuthRequestBody) -> RegisterServiceResponse:
     """
     This function registers a new user by creating the entry in database,
     generating a session token for auth, and returns the user id, username and

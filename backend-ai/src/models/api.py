@@ -8,6 +8,6 @@ class ApiResponse(BaseModel, Generic[T]):
     status_code: int
     payload: Union[T, str]
 
-class RegisterRequestBody(BaseModel):
+class AuthRequestBody(BaseModel):
     username: str
     password: str
