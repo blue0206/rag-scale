@@ -23,12 +23,12 @@ async def register_user(user_data: AuthRequestBody) -> AuthServiceResponse:
         new_user: UserInDB = await users_collection.insert_one(
             {"id": uuid4(), "username": user_data.username, "password": hash}
         )
-
-        session_token = await generate_session_token(new_user.id)
     except DuplicateKeyError:
         raise HTTPException(status_code=400, detail="Username already exists.")
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong.")
+
+    session_token = await generate_session_token(new_user.id)
 
     return AuthServiceResponse(
         user_id=new_user.id, username=new_user.username, session_token=session_token
@@ -54,10 +54,7 @@ async def login_user(user_data: AuthRequestBody) -> AuthServiceResponse:
         raise HTTPException(status_code=400, detail="Invalid username or password.")
 
     # Generate session token and return response.
-    try:
-        session_token = await generate_session_token(user.id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Something went wrong.")
+    session_token = await generate_session_token(user.id)
 
     return AuthServiceResponse(
         user_id=user.id, username=user.username, session_token=session_token
@@ -71,12 +68,15 @@ async def generate_session_token(user_id: UUID) -> str:
     """
 
     session_token = secrets.token_hex(32)
-    session: SessionInDB = await sessions_collection.insert_one(
-        {
-            "token": session_token,
-            "user_id": user_id,
-            "expires_at": datetime.now() + timedelta(days=1),
-        }
-    )
+    try:
+        session: SessionInDB = await sessions_collection.insert_one(
+            {
+                "token": session_token,
+                "user_id": user_id,
+                "expires_at": datetime.now() + timedelta(days=1),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Something went wrong.")
 
     return session.token
