@@ -8,6 +8,8 @@ if (
     or not os.getenv("TAVILY_API_KEY")
     or not os.getenv("S3_ACCESS_KEY_ID")
     or not os.getenv("S3_SECRET_ACCESS_KEY")
+    or not os.getenv("MONGO_DB_ROOT_USERNAME")
+    or not os.getenv("MONGO_DB_ROOT_PASSWORD")
 ):
     raise ValueError("Missing one or more environment variables.")
 
@@ -19,6 +21,8 @@ env_config = {
     "TAVILY_API_KEY": os.getenv("TAVILY_API_KEY"),
     "S3_ACCESS_KEY_ID": os.getenv("S3_ACCESS_KEY_ID"),
     "S3_SECRET_ACCESS_KEY": os.getenv("S3_SECRET_ACCESS_KEY"),
+    "MONGO_DB_ROOT_USERNAME": os.getenv("MONGO_DB_ROOT_USERNAME"),
+    "MONGO_DB_ROOT_PASSWORD": os.getenv("MONGO_DB_ROOT_PASSWORD"),
     "GROQ_MODEL": "openai/gpt-oss-120b",
     "GROQ_BASE_URL": "https://api.groq.com/openai/v1",
     "EMBEDDER_MODEL": "nomic-embed-text",
