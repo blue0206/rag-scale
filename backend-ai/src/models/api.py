@@ -1,9 +1,12 @@
 from pydantic import BaseModel
+from typing import TypeVar, Generic, Union
 
-class ApiResponse(BaseModel):
+T = TypeVar("T")
+
+class ApiResponse(BaseModel, Generic[T]):
     success: bool
     status_code: int
-    message: str
+    payload: Union[T, str]
 
 class RegisterRequestBody(BaseModel):
     username: str
