@@ -1,9 +1,10 @@
 import secrets
+import datetime
 from pymongo.errors import DuplicateKeyError
 from passlib.apps import custom_app_context as pwd_context
 from uuid import uuid4, UUID
 from models.api import AuthRequestBody
-from models.auth import UserInDB
+from models.auth import UserInDB, User
 from fastapi import HTTPException
 from ..db.mongo import users_collection, sessions_collection
 
@@ -75,7 +76,7 @@ async def generate_session_token(user_id: UUID) -> str:
             {
                 "token": session_token,
                 "user_id": user_id,
-                "expires_at": datetime.now() + timedelta(days=1),
+                "expires_at": datetime.now() + datetime.timedelta(days=1),
             }
         )
 
@@ -86,3 +87,21 @@ async def generate_session_token(user_id: UUID) -> str:
 
     return session_token
 
+
+async def get_user_from_token(token: str) -> UUID:
+    """
+    This function fetches the session details from the database and returns the
+    user id if the session is valid, else it raises an error.
+    """
+    try:
+        session = await sessions_collection.find_one({"token": token})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Something went wrong.")
+
+    # Check if session is valid and not expired.
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid session token.")
+    if session.get("expires_at") <= datetime.now():
+        raise HTTPException(status_code=401, detail="The session has expired.")
+
+    return session.get("user_id")
