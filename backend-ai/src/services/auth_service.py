@@ -28,7 +28,7 @@ async def register_user(user_data: AuthRequestBody) -> AuthServiceResponse:
         if not result.acknowledged:
             raise HTTPException(status_code=500, detail="Something went wrong.")
     except DuplicateKeyError:
-        raise HTTPException(status_code=400, detail="Username already exists.")
+        raise HTTPException(status_code=409, detail="Username already exists.")
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong.")
 
