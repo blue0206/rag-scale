@@ -3,12 +3,12 @@ from pymongo.errors import DuplicateKeyError
 from passlib.apps import custom_app_context as pwd_context
 from uuid import uuid4, UUID
 from models.api import AuthRequestBody
-from models.auth import UserInDB, AuthServiceResponse
+from models.auth import UserInDB
 from fastapi import HTTPException
 from ..db.mongo import users_collection, sessions_collection
 
 
-async def register_user(user_data: AuthRequestBody) -> AuthServiceResponse:
+async def register_user(user_data: AuthRequestBody) -> str:
     """
     This function registers a new user by creating the entry in database,
     generating a session token for auth, and returns the user id, username and
@@ -34,12 +34,10 @@ async def register_user(user_data: AuthRequestBody) -> AuthServiceResponse:
 
     session_token = await generate_session_token(user_id)
 
-    return AuthServiceResponse(
-        user_id=user_id, username=user_data.username, session_token=session_token
-    )
+    return session_token
 
 
-async def login_user(user_data: AuthRequestBody) -> AuthServiceResponse:
+async def login_user(user_data: AuthRequestBody) -> str:
     """
     This function logs in a user by first fetching the user details from
     database, then comparing the password with the hashed password.
@@ -62,9 +60,7 @@ async def login_user(user_data: AuthRequestBody) -> AuthServiceResponse:
     # Generate session token and return response.
     session_token = await generate_session_token(user.id)
 
-    return AuthServiceResponse(
-        user_id=user.id, username=user.username, session_token=session_token
-    )
+    return session_token
 
 
 async def generate_session_token(user_id: UUID) -> str:
@@ -89,3 +85,4 @@ async def generate_session_token(user_id: UUID) -> str:
         raise HTTPException(status_code=500, detail="Something went wrong.")
 
     return session_token
+

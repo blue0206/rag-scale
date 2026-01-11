@@ -13,9 +13,3 @@ class SessionInDB(BaseModel):
     token: str
     user_id: UUID
     expires_at: datetime
-
-
-class AuthServiceResponse(BaseModel):
-    user_id: UUID
-    username: str
-    session_token: str
