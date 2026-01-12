@@ -15,5 +15,7 @@ async def get_current_user(
     try:
         user_id = await get_user_from_token(token)
         return user_id
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e.detail))
+        raise HTTPException(status_code=401, detail=str(e))
