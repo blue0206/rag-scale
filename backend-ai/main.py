@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.router import api_router
 from src.core.db import setup_db_index
 from src.models.api import ApiResponse
+from src.services.pubsub_service import pubsub_service
 
 load_dotenv()
 app = FastAPI()
@@ -22,8 +23,13 @@ app.add_middleware(
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # Startup
     await setup_db_index()
+    await pubsub_service.connect()
+
     yield
+    # Shutdown
+    await pubsub_service.disconnect()
 
 
 app.include_router(api_router, prefix="/api/v1")
