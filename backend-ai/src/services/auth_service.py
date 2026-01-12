@@ -64,6 +64,20 @@ async def login_user(user_data: AuthRequestBody) -> str:
     return session_token
 
 
+async def logout_user(token: str) -> None:
+    """
+    This function logs out a user by deleting the session token from the DB.
+    """
+
+    try:
+        result = await sessions_collection.delete_one({"token": token})
+
+        if result.deleted_count == 0:
+            print("Logout failed: No session found for the given token.")
+    except Exception as e:
+        print(f"Logout failed: An error occurred while deleting the session: {str(e)}")
+
+
 async def generate_session_token(user_id: UUID) -> str:
     """
     This function generates a session token and updates the database with the
