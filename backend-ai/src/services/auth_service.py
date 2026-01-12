@@ -1,10 +1,10 @@
 import secrets
-import datetime
+from datetime import datetime, timedelta
 from pymongo.errors import DuplicateKeyError
 from passlib.apps import custom_app_context as pwd_context
 from uuid import uuid4, UUID
 from models.api import AuthRequestBody
-from models.auth import UserInDB, User
+from models.auth import UserInDB
 from fastapi import HTTPException
 from ..db.mongo import users_collection, sessions_collection
 
@@ -30,7 +30,7 @@ async def register_user(user_data: AuthRequestBody) -> str:
             raise HTTPException(status_code=500, detail="Something went wrong.")
     except DuplicateKeyError:
         raise HTTPException(status_code=409, detail="Username already exists.")
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Something went wrong.")
 
     session_token = await generate_session_token(user_id)
@@ -48,10 +48,10 @@ async def login_user(user_data: AuthRequestBody) -> str:
 
     # Get user details from database.
     try:
-        user: UserInDB = await users_collection.find_one(
+        user: UserInDB | None = await users_collection.find_one(
             {"username": user_data.username}
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Something went wrong.")
 
     # Check if user exists and password is correct.
@@ -76,13 +76,13 @@ async def generate_session_token(user_id: UUID) -> str:
             {
                 "token": session_token,
                 "user_id": user_id,
-                "expires_at": datetime.now() + datetime.timedelta(days=1),
+                "expires_at": datetime.now() + timedelta(days=1),
             }
         )
 
         if not result.acknowledged:
             raise HTTPException(status_code=500, detail="Something went wrong.")
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Something went wrong.")
 
     return session_token
@@ -95,7 +95,7 @@ async def get_user_from_token(token: str) -> UUID:
     """
     try:
         session = await sessions_collection.find_one({"token": token})
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Something went wrong.")
 
     # Check if session is valid and not expired.
