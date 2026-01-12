@@ -1,10 +1,11 @@
 import asyncio
 import json
 import redis.asyncio as aioredis
+from typing import AsyncGenerator
 
 
 class PubSubService:
-    def __init__(self, host: str = "localhost", port: int = 6379):
+    def __init__(self, host: str = "localhost", port: int = 6379) -> None:
         self.publisher: None | aioredis.Redis = None
         self.subscriber: None | aioredis.Redis = None
         self.connection_details = (host, port)
@@ -29,6 +30,22 @@ class PubSubService:
                 decode_responses=True,
             )
 
+        print("Redis PubSub service connected.")
+
+    async def disconnect(self) -> None:
+        """
+        Disconnect the redis clients for publisher and subscriber.
+        """
+
+        if self.publisher:
+            await self.publisher.close()
+            self.publisher = None
+        if self.subscriber:
+            await self.subscriber.close()
+            self.subscriber = None
+
+        print("Redis PubSub service disconnected.")
+
     async def publish(self, channel: str, data: dict) -> None:
         """
         Publishes a JSON message to a specified channel.
@@ -39,7 +56,7 @@ class PubSubService:
         if self.publisher is not None:
             await self.publisher.publish(channel, json.dumps(data))
 
-    async def subscribe(self, channel: str):
+    async def subscribe(self, channel: str) -> AsyncGenerator[str, None]:
         """
         Subscribes to a specified channel and yields messages as they arrive.
         """
