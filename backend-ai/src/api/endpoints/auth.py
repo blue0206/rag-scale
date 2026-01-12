@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from ...core.dependencies import get_current_user
 from src.models.api import ApiResponse, AuthRequestBody
-from src.services.auth_service import login_user, register_user
+from src.services.auth_service import login_user, logout_user, register_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -39,3 +40,14 @@ async def login(user_data: AuthRequestBody) -> ApiResponse[str]:
         return ApiResponse(
             success=False, status_code=500, payload="Internal Server Error"
         )
+
+
+@router.post("/logout", response_model=ApiResponse[None])
+async def logout(token: str = Depends(get_current_user)) -> ApiResponse[None]:
+    """
+    Endpoint to log out a user.
+    Takes a session token and invalidates the session.
+    """
+
+    await logout_user(token)
+    return ApiResponse(success=True, status_code=200, payload=None)
