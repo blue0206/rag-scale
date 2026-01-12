@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from src.api.router import api_router
 from src.core.db import setup_db_index
 from src.models.api import ApiResponse
 
@@ -18,13 +19,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await setup_db_index()
     yield
 
+
+app.include_router(api_router, prefix="/api/v1")
+
+
 @app.get("/", response_model=ApiResponse[str])
 def root_endpoint() -> ApiResponse[str]:
-    return ApiResponse(success=True, status_code=200, payload="RagScale server is running.")
+    return ApiResponse(
+        success=True, status_code=200, payload="RagScale server is running."
+    )
 
-uvicorn.run(app, host="0.0.0.0", port=8000, reload=True, lifespan='on')
+
+uvicorn.run(app, host="0.0.0.0", port=8000, reload=True, lifespan="on")
