@@ -3,7 +3,8 @@ from rq import Queue
 
 redis_client = Redis(
     host="localhost",
-    port=6379
+    port=6379,
+    db=1
 )
 
 embedding_queue = Queue(
