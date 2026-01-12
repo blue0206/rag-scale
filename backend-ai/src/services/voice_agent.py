@@ -18,8 +18,8 @@ def speech_to_text(filename: str):
 
     try:
         os.remove(filename)
-    except:
-        pass
+    except Exception as e:
+        print(f"Error deleting file {filename}: {e}")
 
     return translation.text
 
