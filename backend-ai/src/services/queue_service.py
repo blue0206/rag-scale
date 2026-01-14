@@ -49,6 +49,16 @@ class QueueService:
     def enqueue_chunking_job(
         self, *, user_id: str, batch_id: str, object_key: str, bucket_name: str
     ):
+        """
+        Enqueues a chunking job to the chunking queue.
+        This method accepts the following parameters:
+
+        - user_id: ID of the user.
+        - batch_id: ID of the batch. This is necessary for tracking the completion of all PDFs uploaded by user.
+        - object_key: S3 object key where the PDF is stored.
+        - bucket_name: Name of the S3 bucket.
+        """
+
         if not self.chunking_queue:
             self.connect()
         if self.chunking_queue is not None:
@@ -63,6 +73,13 @@ class QueueService:
             )
 
     def enqueue_embedding_job(self, *, chunks: List):
+        """
+        Enqueues an embedding job to the embedding queue.
+        This method accepts the following parameters:
+
+        - chunks: List of document chunks to be processed for generating embeddings.
+        """
+
         if not self.embedding_queue:
             self.connect()
         if self.embedding_queue is not None:
