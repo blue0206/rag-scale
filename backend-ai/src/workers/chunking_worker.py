@@ -4,6 +4,8 @@ from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from ..db.s3 import s3_client
+from ..services.batch_tracking_service import batch_tracking_service
+from ..services.queue_service import queue_service
 
 FILES_DIR = "/tmp/ragscale_downloads"
 os.makedirs(FILES_DIR, exist_ok=True)
@@ -62,3 +64,34 @@ def split_file(docs: List[Document]) -> List[Document]:
 
     chunks = text_splitter.split_documents(docs)
     return chunks
+
+
+async def offload_chunks(batch_id: str, chunks: List[Document]) -> None:
+    """
+    This function extracts the text and metadata from the chunks and offloads
+    them to the embedding queue for further processing.
+
+    This function also updates the batch tracking service with the number of files chunked
+    and the total number of chunks accumulated.
+
+    This function accepts the following parameters:
+    - batch_id: ID of the batch.
+    - chunks: List of document chunks.
+    """
+    
+    n = len(chunks)
+
+    print(f"Chunking complete. Offloading {n} chunks to embedding queue.")
+
+    # Update status in batch tracking service.
+    await batch_tracking_service.increment_field(batch_id=batch_id, field="files_chunked", delta=1)
+    await batch_tracking_service.increment_field(batch_id=batch_id, field="total_chunks", delta=n)
+
+    # Offload chunks in batches of 20 to embedding queue.
+    for i in range(0, n, 20):
+        chunk_subset = chunks[i:i+20]
+
+        payloads = [{"text": chunk.page_content, "metadata": chunk.metadata} for chunk in chunk_subset]
+        queue_service.enqueue_embedding_job(batch_id=batch_id, chunks=payloads)
+
+    print("All chunks offloaded to embedding queue.")
