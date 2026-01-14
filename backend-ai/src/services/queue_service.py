@@ -1,6 +1,7 @@
 from redis import Redis
 from rq import Queue, Retry
 from typing import List
+from models.ingestion import ChunkingJob, EmbeddingJob
 from workers.chunking_worker import chunk_pdf
 from workers.embedding_worker import process_chunks
 
@@ -64,12 +65,7 @@ class QueueService:
         if self.chunking_queue is not None:
             self.chunking_queue.enqueue(
                 chunk_pdf,
-                {
-                    "user_id": user_id,
-                    "batch_id": batch_id,
-                    "object_key": object_key,
-                    "bucket_name": bucket_name,
-                },
+                ChunkingJob(user_id=user_id, batch_id=batch_id, object_key=object_key, bucket_name=bucket_name),
                 retry=Retry(max=3, interval=[10, 30, 60]),
             )
 
@@ -87,7 +83,7 @@ class QueueService:
         if self.embedding_queue is not None:
             self.embedding_queue.enqueue(
                 process_chunks, 
-                {"batch_id": batch_id, "chunks": chunks}, 
+                EmbeddingJob(batch_id=batch_id, payload=chunks),
                 retry=Retry(max=3, interval=[10, 30, 60])
             )
 
