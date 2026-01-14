@@ -1,5 +1,5 @@
 from redis import Redis
-from rq import Queue
+from rq import Queue, Retry
 from typing import List
 from workers.chunking_worker import chunk_pdf
 from workers.embedding_worker import process_chunks
@@ -70,6 +70,7 @@ class QueueService:
                     "object_key": object_key,
                     "bucket_name": bucket_name,
                 },
+                retry=Retry(max=3, interval=[10, 30, 60]),
             )
 
     def enqueue_embedding_job(self, *, chunks: List):
@@ -83,7 +84,9 @@ class QueueService:
         if not self.embedding_queue:
             self.connect()
         if self.embedding_queue is not None:
-            self.embedding_queue.enqueue(process_chunks, chunks)
+            self.embedding_queue.enqueue(
+                process_chunks, chunks, retry=Retry(max=3, interval=[10, 30, 60])
+            )
 
 
 queue_service = QueueService()
