@@ -73,11 +73,12 @@ class QueueService:
                 retry=Retry(max=3, interval=[10, 30, 60]),
             )
 
-    def enqueue_embedding_job(self, *, chunks: List):
+    def enqueue_embedding_job(self, *, batch_id: str, chunks: List):
         """
         Enqueues an embedding job to the embedding queue.
         This method accepts the following parameters:
 
+        - batch_id: ID of the batch.
         - chunks: List of document chunks to be processed for generating embeddings.
         """
 
@@ -85,7 +86,9 @@ class QueueService:
             self.connect()
         if self.embedding_queue is not None:
             self.embedding_queue.enqueue(
-                process_chunks, chunks, retry=Retry(max=3, interval=[10, 30, 60])
+                process_chunks, 
+                {"batch_id": batch_id, "chunks": chunks}, 
+                retry=Retry(max=3, interval=[10, 30, 60])
             )
 
 
