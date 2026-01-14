@@ -4,6 +4,8 @@ from typing import List
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from models.ingestion import ChunkingJob
 from ..db.s3 import s3_client
 from ..services.batch_tracking_service import batch_tracking_service
 from ..services.queue_service import queue_service
@@ -98,7 +100,7 @@ async def offload_chunks(batch_id: str, chunks: List[Document]) -> None:
     print("All chunks offloaded to embedding queue.")
 
 
-def chunk_pdf(user_id: str, batch_id: str, object_key: str, bucket_name: str) -> None:
+def chunk_pdf(data: ChunkingJob) -> None:
     """
     This function loads the PDF, chunks it, and offloads them into embedding
     queue for generating vector embeddings.
@@ -109,6 +111,8 @@ def chunk_pdf(user_id: str, batch_id: str, object_key: str, bucket_name: str) ->
     - object_key: S3 object key where the PDF is stored.
     - bucket_name: Name of the S3 bucket.
     """
+    
+    user_id, batch_id, object_key, bucket_name = data.user_id, data.batch_id, data.object_key, data.bucket_name
 
     try:
         docs = load_file(user_id, batch_id, object_key, bucket_name)
