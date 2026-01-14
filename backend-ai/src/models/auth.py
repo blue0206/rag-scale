@@ -1,15 +1,14 @@
 from datetime import datetime
 from pydantic import BaseModel
-from uuid import UUID
 
 
 class UserInDB(BaseModel):
-    id: UUID
+    id: str
     username: str
     password: str
 
 
 class SessionInDB(BaseModel):
     token: str
-    user_id: UUID
+    user_id: str
     expires_at: datetime

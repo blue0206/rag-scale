@@ -2,7 +2,7 @@ import secrets
 from datetime import datetime, timedelta
 from pymongo.errors import DuplicateKeyError
 from passlib.apps import custom_app_context as pwd_context
-from uuid import uuid4, UUID
+from uuid import uuid4
 from models.api import AuthRequestBody
 from models.auth import UserInDB
 from fastapi import HTTPException
@@ -18,7 +18,7 @@ async def register_user(user_data: AuthRequestBody) -> str:
 
     # hash password and generate user id
     hash = pwd_context.hash(user_data.password)
-    user_id = uuid4()
+    user_id = str(uuid4())
 
     # Create user and generate session token for auth.
     try:
@@ -78,7 +78,7 @@ async def logout_user(token: str) -> None:
         print(f"Logout failed: An error occurred while deleting the session: {str(e)}")
 
 
-async def generate_session_token(user_id: UUID) -> str:
+async def generate_session_token(user_id: str) -> str:
     """
     This function generates a session token and updates the database with the
     session token and corresponding user id with expiry time.
@@ -102,7 +102,7 @@ async def generate_session_token(user_id: UUID) -> str:
     return session_token
 
 
-async def get_user_from_token(token: str) -> UUID:
+async def get_user_from_token(token: str) -> str:
     """
     This function fetches the session details from the database and returns the
     user id if the session is valid, else it raises an error.
