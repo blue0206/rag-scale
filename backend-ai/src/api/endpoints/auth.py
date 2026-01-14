@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from ...core.dependencies import get_current_user
+from ...core.dependencies import get_user_token
 from src.models.api import ApiResponse, AuthRequestBody
 from src.services.auth_service import login_user, logout_user, register_user
 
@@ -43,7 +43,7 @@ async def login(user_data: AuthRequestBody) -> ApiResponse[str]:
 
 
 @router.post("/logout", response_model=ApiResponse[None])
-async def logout(token: str = Depends(get_current_user)) -> ApiResponse[None]:
+async def logout(token: str = Depends(get_user_token)) -> ApiResponse[None]:
     """
     Endpoint to log out a user.
     Takes a session token and invalidates the session.
