@@ -1,4 +1,5 @@
 import os
+import asyncio
 from typing import List
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
@@ -95,3 +96,28 @@ async def offload_chunks(batch_id: str, chunks: List[Document]) -> None:
         queue_service.enqueue_embedding_job(batch_id=batch_id, chunks=payloads)
 
     print("All chunks offloaded to embedding queue.")
+
+
+def chunk_pdf(user_id: str, batch_id: str, object_key: str, bucket_name: str) -> None:
+    """
+    This function loads the PDF, chunks it, and offloads them into embedding
+    queue for generating vector embeddings.
+
+    This function accepts the following parameters:
+    - user_id: ID of the user.
+    - batch_id: ID of the batch.
+    - object_key: S3 object key where the PDF is stored.
+    - bucket_name: Name of the S3 bucket.
+    """
+
+    try:
+        docs = load_file(user_id, batch_id, object_key, bucket_name)
+        chunks = split_file(docs)
+        asyncio.run(offload_chunks(batch_id, chunks))
+    except Exception as e:
+        print(f"Error while chunking PDF: {str(e)}")
+        asyncio.run(batch_tracking_service.update_status(batch_id=batch_id, status="FAILED"))
+
+        # TODO: Send event to frontend.
+
+        raise e
