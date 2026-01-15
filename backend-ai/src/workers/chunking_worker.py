@@ -7,7 +7,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from models.ingestion import ChunkingJob
 from services.pubsub_service import publish_ingestion_failure
 from ..db.s3 import s3_client
-from ..services.batch_tracking_service import batch_tracking_service
+from ..services.batch_tracking_service import batch_tracking_service, check_ingestion_failure
 from ..services.queue_service import queue_service
 
 FILES_DIR = "/tmp/ragscale_downloads"
@@ -124,6 +124,10 @@ def chunk_pdf(data: ChunkingJob) -> None:
         data.object_key,
         data.bucket_name,
     )
+
+    if check_ingestion_failure(batch_id=batch_id):
+        print("PDF Ingestion has failed. Chunking worker exiting early...")
+        return
 
     try:
         docs = load_file(user_id, batch_id, object_key, bucket_name)

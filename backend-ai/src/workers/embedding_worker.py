@@ -4,7 +4,7 @@ from langchain_qdrant import QdrantVectorStore
 from langchain_core.documents import Document
 from ..core.config import env_config
 from ..services.pubsub_service import pubsub_service, publish_ingestion_failure
-from ..services.batch_tracking_service import batch_tracking_service
+from ..services.batch_tracking_service import batch_tracking_service, check_ingestion_failure
 from models.ingestion import EmbeddingJob, ProgressState
 
 
@@ -17,6 +17,10 @@ def process_chunks(data: EmbeddingJob) -> None:
     """
     This function embeds the given chunks, stores them in Qdrant vector store and updates the batch tracking service.
     """
+
+    if check_ingestion_failure(batch_id=data.batch_id):
+        print("PDF Ingestion has failed. Embedding worker exiting early...")
+        return
 
     try:
         # Convert payloads back to Documents
