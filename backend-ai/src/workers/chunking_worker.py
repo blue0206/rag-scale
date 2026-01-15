@@ -4,7 +4,6 @@ from typing import List
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from models.ingestion import ChunkingJob
 from ..db.s3 import s3_client
 from ..services.batch_tracking_service import batch_tracking_service
@@ -69,7 +68,7 @@ def split_file(docs: List[Document]) -> List[Document]:
     return chunks
 
 
-async def offload_chunks(batch_id: str, chunks: List[Document]) -> None:
+async def offload_chunks(user_id: str, batch_id: str, chunks: List[Document]) -> None:
     """
     This function extracts the text and metadata from the chunks and offloads
     them to the embedding queue for further processing.
@@ -78,6 +77,7 @@ async def offload_chunks(batch_id: str, chunks: List[Document]) -> None:
     and the total number of chunks accumulated.
 
     This function accepts the following parameters:
+    - user_id: ID of the user.
     - batch_id: ID of the batch.
     - chunks: List of document chunks.
     """
@@ -95,7 +95,7 @@ async def offload_chunks(batch_id: str, chunks: List[Document]) -> None:
         chunk_subset = chunks[i:i+20]
 
         payloads = [{"text": chunk.page_content, "metadata": chunk.metadata} for chunk in chunk_subset]
-        queue_service.enqueue_embedding_job(batch_id=batch_id, chunks=payloads)
+        queue_service.enqueue_embedding_job(user_id=user_id, batch_id=batch_id, chunks=payloads)
 
     print("All chunks offloaded to embedding queue.")
 
@@ -117,7 +117,7 @@ def chunk_pdf(data: ChunkingJob) -> None:
     try:
         docs = load_file(user_id, batch_id, object_key, bucket_name)
         chunks = split_file(docs)
-        asyncio.run(offload_chunks(batch_id, chunks))
+        asyncio.run(offload_chunks(user_id, batch_id, chunks))
     except Exception as e:
         print(f"Error while chunking PDF: {str(e)}")
         asyncio.run(batch_tracking_service.update_status(batch_id=batch_id, status="FAILED"))

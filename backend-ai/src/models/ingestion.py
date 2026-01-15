@@ -15,6 +15,7 @@ class EmbeddingPayload(BaseModel):
 
 
 class EmbeddingJob(BaseModel):
+    user_id: str
     batch_id: str
     payload: List[EmbeddingPayload]
 
