@@ -13,7 +13,10 @@ from ..services.queue_service import queue_service
 FILES_DIR = "/tmp/ragscale_downloads"
 os.makedirs(FILES_DIR, exist_ok=True)
 
-def load_file(user_id: str, batch_id: str, object_key: str, bucket_name: str) -> List[Document]:
+
+def load_file(
+    user_id: str, batch_id: str, object_key: str, bucket_name: str
+) -> List[Document]:
     """
     This function downloads the PDF file from S3 and temporarily saves to disk.
     The saved file is loaded using PyPDFLoader and then deleted from disk.
@@ -30,12 +33,8 @@ def load_file(user_id: str, batch_id: str, object_key: str, bucket_name: str) ->
     path = os.path.join(FILES_DIR, object_key.replace("/", "_"))
 
     print(f"Downloading file from s3://{bucket_name}/{object_key} to {path}.")
-    
-    s3_client.download_file(
-        Bucket=bucket_name,
-        Key=object_key,
-        Filename=path
-    )
+
+    s3_client.download_file(Bucket=bucket_name, Key=object_key, Filename=path)
 
     print("File downloaded. Loading document.")
 
@@ -44,7 +43,7 @@ def load_file(user_id: str, batch_id: str, object_key: str, bucket_name: str) ->
 
     os.remove(path)
     print("Document loaded successfully. Temporary file removed.")
-    
+
     # Store user_id and batch_id in metadata for proper retrieval.
     for doc in docs:
         doc.metadata["user_id"] = user_id
@@ -58,10 +57,7 @@ def split_file(docs: List[Document]) -> List[Document]:
     This function accepts a list of Documents and splits the documents into chunks.
     """
 
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=400
-    )
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=400)
 
     print("Splitting document into chunks.")
 
@@ -82,21 +78,30 @@ async def offload_chunks(user_id: str, batch_id: str, chunks: List[Document]) ->
     - batch_id: ID of the batch.
     - chunks: List of document chunks.
     """
-    
+
     n = len(chunks)
 
     print(f"Chunking complete. Offloading {n} chunks to embedding queue.")
 
     # Update status in batch tracking service.
-    await batch_tracking_service.increment_field(batch_id=batch_id, field="files_chunked", delta=1)
-    await batch_tracking_service.increment_field(batch_id=batch_id, field="total_chunks", delta=n)
+    await batch_tracking_service.increment_field(
+        batch_id=batch_id, field="files_chunked", delta=1
+    )
+    await batch_tracking_service.increment_field(
+        batch_id=batch_id, field="total_chunks", delta=n
+    )
 
     # Offload chunks in batches of 20 to embedding queue.
     for i in range(0, n, 20):
-        chunk_subset = chunks[i:i+20]
+        chunk_subset = chunks[i : i + 20]
 
-        payloads = [{"text": chunk.page_content, "metadata": chunk.metadata} for chunk in chunk_subset]
-        queue_service.enqueue_embedding_job(user_id=user_id, batch_id=batch_id, chunks=payloads)
+        payloads = [
+            {"text": chunk.page_content, "metadata": chunk.metadata}
+            for chunk in chunk_subset
+        ]
+        queue_service.enqueue_embedding_job(
+            user_id=user_id, batch_id=batch_id, chunks=payloads
+        )
 
     print("All chunks offloaded to embedding queue.")
 
@@ -112,8 +117,13 @@ def chunk_pdf(data: ChunkingJob) -> None:
     - object_key: S3 object key where the PDF is stored.
     - bucket_name: Name of the S3 bucket.
     """
-    
-    user_id, batch_id, object_key, bucket_name = data.user_id, data.batch_id, data.object_key, data.bucket_name
+
+    user_id, batch_id, object_key, bucket_name = (
+        data.user_id,
+        data.batch_id,
+        data.object_key,
+        data.bucket_name,
+    )
 
     try:
         docs = load_file(user_id, batch_id, object_key, bucket_name)
@@ -121,9 +131,11 @@ def chunk_pdf(data: ChunkingJob) -> None:
         asyncio.run(offload_chunks(user_id, batch_id, chunks))
     except Exception as e:
         print(f"Error while chunking PDF: {str(e)}")
-        
+
         # Update the batch tracking service and publish failure event.
-        asyncio.run(batch_tracking_service.update_status(batch_id=batch_id, status="FAILED"))
+        asyncio.run(
+            batch_tracking_service.update_status(batch_id=batch_id, status="FAILED")
+        )
         asyncio.run(publish_ingestion_failure(user_id=user_id, batch_id=batch_id))
 
         raise e
