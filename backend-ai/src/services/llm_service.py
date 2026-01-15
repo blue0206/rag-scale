@@ -66,7 +66,7 @@ def classify_query(state: State) -> State:
     """
 
     # Add user query to messages.
-    state["messages"] = {"role": "user", "content": state.get("user_query")}
+    state["messages"] = [{"role": "user", "content": state.get("user_query")}]
 
     # Make LLM call.
     response = llm_client.responses.create(
@@ -74,9 +74,15 @@ def classify_query(state: State) -> State:
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
     )
-
+    
     # Update state with query type.
-    state["query_type"] = response.output[-1].content[-1].text.strip().upper()
+    output_text = response.output_text.strip().upper()
+    if output_text not in ["NORMAL", "RETRIEVAL"]:
+        output_text = "NORMAL"
+
+    assert output_text == "NORMAL" or output_text == "RETRIEVAL"
+
+    state["query_type"] = output_text
     return state
 
 
@@ -144,7 +150,7 @@ def normal_query(state: State):
             writer({"delta": chunk.delta})
 
     # Update state messages with final response.
-    state["messages"].append({"role": "assistant", "content": response_text})
+    state["messages"] = [{"role": "assistant", "content": response_text}]
 
     # mem0 handles updating factual, episodic, and semantic memory
     # about user based on provided messages.
@@ -238,7 +244,7 @@ def retrieval_query(state: State):
             writer({"delta": chunk.delta})
 
     # Update state messages with final response.
-    state["messages"].append({"role": "assistant", "content": response_text})
+    state["messages"] = [{"role": "assistant", "content": response_text}]
 
     # mem0 handles updating factual, episodic, and semantic memory
     # about user based on provided messages.
