@@ -86,9 +86,7 @@ class BatchTrackingService:
         if self.redis_client is not None:
             await self.redis_client.hset(f"batch:{batch_id}", "status", status)  # type: ignore
 
-    async def get_batch_status(
-        self, batch_id: str
-    ) -> BatchDetails | None:
+    async def get_batch_status(self, batch_id: str) -> BatchDetails | None:
         """
         Retrieves the current status of the batch.
         """
@@ -106,8 +104,22 @@ class BatchTrackingService:
                 files_chunked=int(batch_data.get("files_chunked", 0)),
                 total_chunks=int(batch_data.get("total_chunks", 0)),
                 chunks_embedded=int(batch_data.get("chunks_embedded", 0)),
-                status=batch_data.get("status", "NONE")
+                status=batch_data.get("status", "NONE"),
             )
+
+
+async def check_ingestion_failure(batch_id: str) -> bool:
+    """
+    This function checks the current status of batch in redis hash and returns
+    True if it is failed or missing, else False.
+    """
+
+    batch_details = await batch_tracking_service.get_batch_status(batch_id=batch_id)
+
+    if batch_details is None:
+        return True
+    else:
+        return batch_details.status == "FAILED" or batch_details.status == "NONE"
 
 
 batch_tracking_service = BatchTrackingService()
