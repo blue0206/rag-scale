@@ -6,7 +6,7 @@ from langchain_qdrant import QdrantVectorStore
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_core.runnables import RunnableConfig
-from langchain_core.messages import AIMessageChunk
+from langgraph.config import get_stream_writer
 from ..core.config import env_config
 from ..models.chat import State
 from ..core.llm_client import llm_client
@@ -20,29 +20,19 @@ async def stream_llm_response(user_id: str, user_query: str):
 
     config: RunnableConfig = {"configurable": {"thread_id": user_id}}
     initial_state = State(
-        {"user_id": user_id, "user_query": user_query, "messages": []}
+        {"user_id": user_id, "user_query": user_query, "messages": [], "query_type": None}
     )
 
     full_response = ""
 
     async for chunk in graph.astream(
-        initial_state, config=config, stream_mode="values"
+        initial_state, config=config, stream_mode="custom"
     ):
-        if (
-            chunk.get("messages")
-            and chunk.get("messages")[-1].get("role") == "assistant"
-        ):
-            latest_message = chunk["messages"][-1].get("content")
-
-            if len(latest_message) > len(full_response):
-                new_message = latest_message[len(full_response) :]
-
-                full_response += new_message
-
-                yield new_message
-                # To be sent as SSE in api endpoint.
-                # f"data: {json.dumps({'type': 'text', 'content': new_message})}\n\n"
-                await asyncio.sleep(0.01)
+        delta = chunk.get("delta")
+        if delta:
+            full_response += delta
+            yield delta
+            await asyncio.sleep(0.01)
 
 
 def classify_query(state: State) -> State:
@@ -129,6 +119,8 @@ def normal_query(state: State):
     {user_context}
     """
 
+    writer = get_stream_writer()
+
     # Make LLM call with web search mcp.
     stream = llm_client.responses.create(
         model=env_config["GROQ_MODEL"],
@@ -147,17 +139,9 @@ def normal_query(state: State):
 
     response_text = ""
     for chunk in stream:
-        if (
-            chunk.output
-            and chunk.output[-1].content
-            and chunk.output[-1].content[-1].text
-        ):
-            response_text += chunk.output[-1].content[-1].text
-
-            updated_messages = state["messages"] + [
-                {"role": "assistant", "content": response_text}
-            ]
-            yield {"messages": updated_messages}
+        if chunk.type == "response.output_text.delta":
+            response_text += chunk.delta
+            writer({"delta": chunk.delta})
 
     # Update state messages with final response.
     state["messages"].append({"role": "assistant", "content": response_text})
@@ -171,6 +155,8 @@ def normal_query(state: State):
             {"role": "assistant", "content": response_text},
         ],
     )
+
+    return state
 
 
 def retrieval_query(state: State):
@@ -236,6 +222,8 @@ def retrieval_query(state: State):
     {context}
     """
 
+    writer = get_stream_writer()
+
     stream = llm_client.responses.create(
         model=env_config["GROQ_MODEL"],
         instructions=SYSTEM_PROMPT,
@@ -245,17 +233,9 @@ def retrieval_query(state: State):
 
     response_text = ""
     for chunk in stream:
-        if (
-            chunk.output
-            and chunk.output[-1].content
-            and chunk.output[-1].content[-1].text
-        ):
-            response_text += chunk.output[-1].content[-1].text
-
-            updated_messages = state["messages"] + [
-                {"role": "assistant", "content": response_text}
-            ]
-            yield {"messages": updated_messages}
+        if chunk.type == "response.output_text.delta":
+            response_text += chunk.delta
+            writer({"delta": chunk.delta})
 
     # Update state messages with final response.
     state["messages"].append({"role": "assistant", "content": response_text})
@@ -269,6 +249,8 @@ def retrieval_query(state: State):
             {"role": "assistant", "content": response_text},
         ],
     )
+
+    return state
 
 
 workflow = StateGraph(State)
