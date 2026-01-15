@@ -1,6 +1,7 @@
 import redis.asyncio as aioredis
-from typing import Literal, Dict, Union
+from typing import Literal
 from uuid import uuid4
+from models.ingestion import BatchDetails
 
 
 class BatchTrackingService:
@@ -87,7 +88,7 @@ class BatchTrackingService:
 
     async def get_batch_status(
         self, batch_id: str
-    ) -> Dict[str, Union[str, int]] | None:
+    ) -> BatchDetails | None:
         """
         Retrieves the current status of the batch.
         """
@@ -99,14 +100,14 @@ class BatchTrackingService:
             if not batch_data:
                 return None
 
-            return {
-                "user_id": batch_data.get("user_id", ""),
-                "total_files": int(batch_data.get("total_files", 0)),
-                "files_chunked": int(batch_data.get("files_chunked", 0)),
-                "total_chunks": int(batch_data.get("total_chunks", 0)),
-                "chunks_embedded": int(batch_data.get("chunks_embedded", 0)),
-                "status": batch_data.get("status", ""),
-            }
+            return BatchDetails(
+                user_id=batch_data.get("user_id", ""),
+                total_files=int(batch_data.get("total_files", 0)),
+                files_chunked=int(batch_data.get("files_chunked", 0)),
+                total_chunks=int(batch_data.get("total_chunks", 0)),
+                chunks_embedded=int(batch_data.get("chunks_embedded", 0)),
+                status=batch_data.get("status", "NONE")
+            )
 
 
 batch_tracking_service = BatchTrackingService()
