@@ -54,7 +54,11 @@ def classify_query(state: State) -> State:
     mem_search = mem0_client.search(
         query=state.get("user_query"), user_id=state.get("user_id")
     )
-    user_context = [f"ID: {mem.id}\nMemory: {mem.get('memory')}" for mem in mem_search]
+
+    mem_list = [
+        entry.get("memory") for entry in mem_search.get("results", [])
+    ]
+    user_context = "\n".join(f"- {mem}" for mem in mem_list)
 
     SYSTEM_PROMPT = f"""
     You are a helpful AI Assistant. You will receive a user query and based on
@@ -107,7 +111,11 @@ def normal_query(state: State):
     mem_search = mem0_client.search(
         query=state.get("user_query"), user_id=state.get("user_id")
     )
-    user_context = [f"ID: {mem.id}\nMemory: {mem.get('memory')}" for mem in mem_search]
+    
+    mem_list = [
+        entry.get("memory") for entry in mem_search.get("results", [])
+    ]
+    user_context = "\n".join(f"- {mem}" for mem in mem_list)
 
     SYSTEM_PROMPT = f"""
     You are an expert AI Assistant. 
@@ -206,7 +214,11 @@ def retrieval_query(state: State):
     mem_search = mem0_client.search(
         query=state.get("user_query"), user_id=state.get("user_id")
     )
-    user_context = [f"ID: {mem.id}\nMemory: {mem.get('memory')}" for mem in mem_search]
+    
+    mem_list = [
+        entry.get("memory") for entry in mem_search.get("results", [])
+    ]
+    user_context = "\n".join(f"- {mem}" for mem in mem_list)
 
     SYSTEM_PROMPT = f"""
     You are an expert AI Assistant. You will receive a user query.
