@@ -5,6 +5,7 @@ from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from models.ingestion import ChunkingJob
+from services.pubsub_service import publish_ingestion_failure
 from ..db.s3 import s3_client
 from ..services.batch_tracking_service import batch_tracking_service
 from ..services.queue_service import queue_service
@@ -120,8 +121,9 @@ def chunk_pdf(data: ChunkingJob) -> None:
         asyncio.run(offload_chunks(user_id, batch_id, chunks))
     except Exception as e:
         print(f"Error while chunking PDF: {str(e)}")
+        
+        # Update the batch tracking service and publish failure event.
         asyncio.run(batch_tracking_service.update_status(batch_id=batch_id, status="FAILED"))
-
-        # TODO: Send event to frontend.
+        asyncio.run(publish_ingestion_failure(user_id=user_id, batch_id=batch_id))
 
         raise e
