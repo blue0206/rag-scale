@@ -20,7 +20,12 @@ async def stream_llm_response(user_id: str, user_query: str):
 
     config: RunnableConfig = {"configurable": {"thread_id": user_id}}
     initial_state = State(
-        {"user_id": user_id, "user_query": user_query, "messages": [], "query_type": None}
+        {
+            "user_id": user_id,
+            "user_query": user_query,
+            "messages": [],
+            "query_type": None,
+        }
     )
 
     full_response = ""
@@ -45,9 +50,7 @@ def classify_query(state: State) -> State:
         query=state.get("user_query"), user_id=state.get("user_id")
     )
 
-    mem_list = [
-        entry.get("memory") for entry in mem_search.get("results", [])
-    ]
+    mem_list = [entry.get("memory") for entry in mem_search.get("results", [])]
     user_context = "\n".join(f"- {mem}" for mem in mem_list)
 
     SYSTEM_PROMPT = f"""
@@ -74,7 +77,7 @@ def classify_query(state: State) -> State:
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
     )
-    
+
     # Update state with query type.
     output_text = response.output_text.strip().upper()
     if output_text not in ["NORMAL", "RETRIEVAL"]:
@@ -107,10 +110,8 @@ def normal_query(state: State):
     mem_search = mem0_client.search(
         query=state.get("user_query"), user_id=state.get("user_id")
     )
-    
-    mem_list = [
-        entry.get("memory") for entry in mem_search.get("results", [])
-    ]
+
+    mem_list = [entry.get("memory") for entry in mem_search.get("results", [])]
     user_context = "\n".join(f"- {mem}" for mem in mem_list)
 
     SYSTEM_PROMPT = f"""
@@ -206,10 +207,8 @@ def retrieval_query(state: State):
     mem_search = mem0_client.search(
         query=state.get("user_query"), user_id=state.get("user_id")
     )
-    
-    mem_list = [
-        entry.get("memory") for entry in mem_search.get("results", [])
-    ]
+
+    mem_list = [entry.get("memory") for entry in mem_search.get("results", [])]
     user_context = "\n".join(f"- {mem}" for mem in mem_list)
 
     SYSTEM_PROMPT = f"""
