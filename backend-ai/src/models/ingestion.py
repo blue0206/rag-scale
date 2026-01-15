@@ -25,3 +25,12 @@ class ProgressState(BaseModel):
     status: Literal["PENDING", "SUCCESS", "FAILED"]
     progress: int
     details: Optional[str]
+
+
+class BatchDetails(BaseModel):
+    user_id: str
+    total_files: int
+    files_chunked: int
+    total_chunks: int
+    chunks_embedded: int
+    status: Literal["PENDING", "SUCCESS", "FAILED", "NONE"]
