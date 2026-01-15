@@ -75,5 +75,21 @@ class PubSubService:
                     await asyncio.sleep(0.01)
 
 
+async def publish_ingestion_failure(user_id: str, batch_id: str) -> None:
+    """
+    Publishes a failure event message to the 'status:{batch_id}' channel
+    in case of an errors encountered during ingestion workflow.
+
+    This function accepts the following parameters:
+    - user_id: ID of the user.
+    - batch_id: ID of the batch.
+    """
+
+    await pubsub_service.publish(channel=f"status:{batch_id}", data=ProgressState(
+        user_id=user_id,
+        status="FAILED",
+        progress=0,
+        details="Failed to process the PDF(s). Please try again later."
+    ))
 
 pubsub_service = PubSubService()
