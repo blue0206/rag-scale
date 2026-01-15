@@ -10,12 +10,12 @@ from ...db.s3 import s3_client
 from ...services.batch_tracking_service import batch_tracking_service
 from ...services.queue_service import queue_service
 from ...services.pubsub_service import pubsub_service
-from ...models.api import ApiResponse
+from ...models.api import ApiResponse, IngestPayload
 
 router = APIRouter(prefix="/ingest", tags=["Ingestion"])
 
 
-@router.post("/upload")
+@router.post("/upload", response_model=ApiResponse[IngestPayload])
 async def upload_files(
     files: List[UploadFile] = File(...), user_id: str = Depends(get_current_user)
 ):
@@ -47,10 +47,10 @@ async def upload_files(
         return ApiResponse(
             success=True,
             status_code=202,
-            payload={
-                "message": "Files uploaded and ingestion jobs enqueued.",
-                "batch_id": batch_id,
-            },
+            payload=IngestPayload(
+                message="Files uploaded and ingestion jobs enqueued.",
+                batch_id=batch_id
+            ),
         )
     except Exception:
         return ApiResponse(
