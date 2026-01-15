@@ -2,6 +2,7 @@ import asyncio
 import json
 import redis.asyncio as aioredis
 from typing import AsyncGenerator
+from models.ingestion import ProgressState
 
 
 class PubSubService:
@@ -46,7 +47,7 @@ class PubSubService:
 
         print("Redis PubSub service disconnected.")
 
-    async def publish(self, channel: str, data: dict) -> None:
+    async def publish(self, channel: str, data: ProgressState) -> None:
         """
         Publishes a JSON message to a specified channel.
         """
@@ -72,6 +73,7 @@ class PubSubService:
                 if message:
                     yield message["data"]
                     await asyncio.sleep(0.01)
+
 
 
 pubsub_service = PubSubService()
