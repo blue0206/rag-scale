@@ -11,3 +11,7 @@ class ApiResponse(BaseModel, Generic[T]):
 class AuthRequestBody(BaseModel):
     username: str
     password: str
+
+class IngestPayload(BaseModel):
+    message: str
+    batch_id: str
