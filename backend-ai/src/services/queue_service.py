@@ -1,9 +1,7 @@
 from redis import Redis
 from rq import Queue, Retry
 from typing import List
-from models.ingestion import ChunkingJob, EmbeddingJob
-from workers.chunking_worker import chunk_pdf
-from workers.embedding_worker import process_chunks
+from ..models.ingestion import ChunkingJob, EmbeddingJob
 
 
 class QueueService:
@@ -60,6 +58,9 @@ class QueueService:
         - bucket_name: Name of the S3 bucket.
         """
 
+        # Imported here to prevent circular import issue.
+        from ..workers.chunking_worker import chunk_pdf
+
         if not self.chunking_queue:
             self.connect()
         if self.chunking_queue is not None:
@@ -78,6 +79,9 @@ class QueueService:
         - batch_id: ID of the batch.
         - chunks: List of document chunks to be processed for generating embeddings.
         """
+
+        # Imported here to prevent circular import issue.
+        from ..workers.embedding_worker import process_chunks
 
         if not self.embedding_queue:
             self.connect()
