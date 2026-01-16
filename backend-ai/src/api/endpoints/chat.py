@@ -47,6 +47,19 @@ async def voice_handler(
 async def stream_chat(
     data: Union[UploadFile, str], user_id: str
 ) -> AsyncGenerator[str, None]:
+    """
+    This function handles core streaming based on the type of query provided.
+
+    If the query provided is in text format, then we simply stream LLM response
+    without involving voice-agents in the loop.
+
+    If the query provided is an audio file, then:
+    1. It is first transcribed using STT api.
+    2. The transcribed text is passed to LangGraph workflow to stream LLM text response.
+    3. The entire text response is accumulate and passed to TTS api for audio output.
+    4. The audio file is served as static asset and the filename is sent as one final event.
+
+    """
     try:
         is_voice = isinstance(data, UploadFile)
 
