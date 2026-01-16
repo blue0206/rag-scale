@@ -1,0 +1,3 @@
+api: uvicorn main:app --reload
+chunking_worker: rq worker src.workers.chunking_worker.py
+embedding_worker: rq worker src.workers.embedding_worker.py
