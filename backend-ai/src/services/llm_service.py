@@ -1,6 +1,6 @@
 import asyncio
 from qdrant_client.models import Filter, FieldCondition, MatchValue
-from typing import Literal
+from typing import AsyncGenerator, Literal
 from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langgraph.graph import StateGraph, START, END
@@ -13,7 +13,7 @@ from ..core.llm_client import llm_client
 from ..db.mem0 import mem0_client
 
 
-async def stream_llm_response(user_id: str, user_query: str):
+async def stream_llm_response(user_id: str, user_query: str) -> AsyncGenerator[str, None]:
     """
     Invokes the langgraph workflow and streams the response as SSE.
     """
@@ -28,14 +28,11 @@ async def stream_llm_response(user_id: str, user_query: str):
         }
     )
 
-    full_response = ""
-
     async for chunk in graph.astream(
         initial_state, config=config, stream_mode="custom"
     ):
         delta = chunk.get("delta")
         if delta:
-            full_response += delta
             yield delta
             await asyncio.sleep(0.01)
 
@@ -100,7 +97,7 @@ def route_query(state: State) -> Literal["normal_query", "retrieval_query"]:
     return "normal_query"
 
 
-def normal_query(state: State):
+def normal_query(state: State) -> State:
     """
     Makes a streaming LLM call to answer the user query and yeilds response
     as chunks.
@@ -166,7 +163,7 @@ def normal_query(state: State):
     return state
 
 
-def retrieval_query(state: State):
+def retrieval_query(state: State) -> State:
     """
     Converts user query into vector embeddings and performs a vector similarity
     search to retrieve relevant data from vector database to answer the query.
