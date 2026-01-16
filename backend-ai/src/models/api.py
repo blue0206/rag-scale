@@ -1,3 +1,4 @@
+from fastapi import UploadFile, File
 from pydantic import BaseModel
 from typing import TypeVar, Generic
 
@@ -18,3 +19,7 @@ class IngestPayload(BaseModel):
 
 class ChatRequestBody(BaseModel):
     query: str
+
+class ChatForm:
+    def __init__(self, audio: UploadFile = File(...)):
+        self.audio = audio
