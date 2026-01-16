@@ -7,14 +7,17 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from models.ingestion import ChunkingJob
 from services.pubsub_service import publish_ingestion_failure
 from ..db.s3 import s3_client
-from ..services.batch_tracking_service import batch_tracking_service, check_ingestion_failure
+from ..services.batch_tracking_service import (
+    batch_tracking_service,
+    check_ingestion_failure,
+)
 from ..services.queue_service import queue_service
 
 FILES_DIR = "/tmp/ragscale_downloads"
 os.makedirs(FILES_DIR, exist_ok=True)
 
 
-def load_file(
+async def load_file(
     user_id: str, batch_id: str, object_key: str, bucket_name: str
 ) -> List[Document]:
     """
@@ -34,7 +37,7 @@ def load_file(
 
     print(f"Downloading file from s3://{bucket_name}/{object_key} to {path}.")
 
-    s3_client.download_file(Bucket=bucket_name, Key=object_key, Filename=path)
+    await s3_client.download_file_async(bucket=bucket_name, key=object_key, path=path)
 
     print("File downloaded. Loading document.")
 
@@ -130,7 +133,7 @@ def chunk_pdf(data: ChunkingJob) -> None:
         return
 
     try:
-        docs = load_file(user_id, batch_id, object_key, bucket_name)
+        docs = asyncio.run(load_file(user_id, batch_id, object_key, bucket_name))
         chunks = split_file(docs)
         asyncio.run(offload_chunks(user_id, batch_id, chunks))
     except Exception as e:
