@@ -30,12 +30,11 @@ async def upload_files(
 
         for file in files:
             file_content = await file.read()
-            async with s3_client:
-                await s3_client.put_object(
-                    Bucket="ragscale-uploads",
-                    Key=f"{batch_id}/{file.filename}",
-                    Body=file_content,
-                )
+            await s3_client.upload_file_async(
+                bucket="ragscale-uploads",
+                key=f"{batch_id}/{file.filename}",
+                file=file_content,
+            )
 
             queue_service.enqueue_chunking_job(
                 user_id=user_id,
@@ -48,8 +47,7 @@ async def upload_files(
             success=True,
             status_code=202,
             payload=IngestPayload(
-                message="Files uploaded and ingestion jobs enqueued.",
-                batch_id=batch_id
+                message="Files uploaded and ingestion jobs enqueued.", batch_id=batch_id
             ),
         )
     except Exception:
