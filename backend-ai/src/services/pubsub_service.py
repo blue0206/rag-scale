@@ -2,7 +2,7 @@ import asyncio
 import json
 import redis.asyncio as aioredis
 from typing import AsyncGenerator
-from models.ingestion import ProgressState
+from ..models.ingestion import ProgressState
 
 
 class PubSubService:

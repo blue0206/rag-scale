@@ -4,7 +4,7 @@ from fastapi import APIRouter, UploadFile, File, Depends, Request
 from fastapi.responses import StreamingResponse
 from typing import List
 from pydantic import ValidationError
-from models.ingestion import ProgressState
+from ...models.ingestion import ProgressState
 from ...core.dependencies import get_current_user
 from ...db.s3 import s3_client
 from ...services.batch_tracking_service import batch_tracking_service

@@ -2,10 +2,10 @@ import json
 from typing import AsyncGenerator, Union
 from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import StreamingResponse
-from models.api import ChatForm, ChatRequestBody
-from models.chat import ChatEvent
-from services.auth_service import get_user_from_token
-from services.voice_agent import speech_to_text, text_to_speech
+from ...models.api import ChatForm, ChatRequestBody
+from ...models.chat import ChatEvent
+from ...services.auth_service import get_user_from_token
+from ...services.voice_agent import speech_to_text, text_to_speech
 from ...services.llm_service import stream_llm_response
 
 router = APIRouter(prefix="/chat", tags=["Chat"])

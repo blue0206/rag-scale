@@ -1,7 +1,7 @@
 import redis.asyncio as aioredis
 from typing import Literal
 from uuid import uuid4
-from models.ingestion import BatchDetails
+from ..models.ingestion import BatchDetails
 
 
 class BatchTrackingService:

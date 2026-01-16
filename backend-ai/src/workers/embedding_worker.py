@@ -5,7 +5,7 @@ from langchain_core.documents import Document
 from ..core.config import env_config
 from ..services.pubsub_service import pubsub_service, publish_ingestion_failure
 from ..services.batch_tracking_service import batch_tracking_service, check_ingestion_failure
-from models.ingestion import EmbeddingJob, ProgressState
+from ..models.ingestion import EmbeddingJob, ProgressState
 
 
 embeddings = OllamaEmbeddings(

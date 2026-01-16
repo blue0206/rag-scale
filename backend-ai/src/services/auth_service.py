@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 from pymongo.errors import DuplicateKeyError
 from passlib.apps import custom_app_context as pwd_context
 from uuid import uuid4
-from models.api import AuthRequestBody
-from models.auth import UserInDB
 from fastapi import HTTPException
+from ..models.api import AuthRequestBody
+from ..models.auth import UserInDB
 from ..db.mongo import users_collection, sessions_collection
 
 

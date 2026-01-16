@@ -4,8 +4,8 @@ from typing import List
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from models.ingestion import ChunkingJob
-from services.pubsub_service import publish_ingestion_failure
+from ..models.ingestion import ChunkingJob
+from ..services.pubsub_service import publish_ingestion_failure
 from ..db.s3 import s3_client
 from ..services.batch_tracking_service import (
     batch_tracking_service,
