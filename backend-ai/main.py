@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from src.api.router import api_router
 from src.core.db import setup_db_index
 from src.models.api import ApiResponse
@@ -40,6 +41,9 @@ async def lifespan(_: FastAPI):
     await batch_tracking_service.disconnect()
     s3_client.disconnect()
 
+
+# Serve static generated audio files.
+app.mount("/audio", StaticFiles(directory="generated_audio"), name="audio")
 
 app.include_router(api_router, prefix="/api/v1")
 
