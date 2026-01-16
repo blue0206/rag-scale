@@ -15,3 +15,6 @@ class AuthRequestBody(BaseModel):
 class IngestPayload(BaseModel):
     message: str
     batch_id: str
+
+class ChatRequestBody(BaseModel):
+    query: str
