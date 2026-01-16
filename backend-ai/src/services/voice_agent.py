@@ -32,7 +32,7 @@ def text_to_speech(transcript: str, user_id: str):
 
     response = groq_client.audio.speech.create(
         model="canopylabs/orpheus-v1-english",
-        voice="troy",
+        voice="autumn",
         input=transcript,
     )
 
