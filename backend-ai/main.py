@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.router import api_router
 from src.core.db import setup_db_index
 from src.models.api import ApiResponse
+from src.db.s3 import s3_client
 from src.services.pubsub_service import pubsub_service
 from src.services.queue_service import queue_service
 from src.services.batch_tracking_service import batch_tracking_service
@@ -30,12 +31,14 @@ async def lifespan(_: FastAPI):
     await pubsub_service.connect()
     queue_service.connect()
     await batch_tracking_service.connect()
+    s3_client.connect()
 
     yield
     # Shutdown
     await pubsub_service.disconnect()
     queue_service.disconnect()
     await batch_tracking_service.disconnect()
+    s3_client.disconnect()
 
 
 app.include_router(api_router, prefix="/api/v1")
