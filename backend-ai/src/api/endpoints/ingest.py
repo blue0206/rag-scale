@@ -58,7 +58,7 @@ async def upload_files(
         )
 
 
-@router.get("/status/{batch_id}")
+@router.get("/status/{batch_id}", dependencies=[Depends(get_current_user)])
 async def get_ingestion_status(req: Request, batch_id: str) -> StreamingResponse:
     """
     Sends batch status updates to clients as server-sent events.
