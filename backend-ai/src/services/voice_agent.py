@@ -46,17 +46,22 @@ async def speech_to_text(file: UploadFile):
     return translation.text
 
 
-def text_to_speech(transcript: str, user_id: str):
+
+async def text_to_speech(transcript: str, user_id: str) -> str:
     """
     This function receives a transcript and a user_id. The transcript is
     converted to speech and saved as .wav audio file to disk.
     """
 
-    response = groq_client.audio.speech.create(
+
+    response = await groq_client.audio.speech.create(
         model="canopylabs/orpheus-v1-english",
         voice="autumn",
         input=transcript,
     )
 
-    filename = f"output_{user_id}.wav"
-    response.write_to_file(filename)
+    output_filename = f"{user_id}_{str(uuid4())}.wav"
+    output_path = os.path.join("generated_audio", output_filename)
+    
+    await response.write_to_file(output_path)
+    return output_filename
