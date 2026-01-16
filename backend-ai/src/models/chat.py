@@ -10,5 +10,5 @@ class State(TypedDict):
     query_type: Optional[Literal["NORMAL", "RETRIEVAL"]]
 
 class ChatEvent(BaseModel):
-    type: Literal["status", "transcription", "text", "audio"]
+    type: Literal["status", "transcription", "text", "audio", "error"]
     content: str
