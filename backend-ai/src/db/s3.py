@@ -31,7 +31,7 @@ class S3Service:
         if self.client:
             self.client.close()
             self.client = None
-            
+
             print("S3 client disconnected.")
     
     async def upload_file_async(self, bucket: str, key: str, file: bytes) -> None:
@@ -61,6 +61,20 @@ class S3Service:
                 Bucket=bucket,
                 Key=key,
                 Filename=path
+            )
+    
+    async def delete_file_async(self, bucket: str, key: str) -> None:
+        """
+        Deletes the file with a given key from S3 storage on a separate thread.
+        """
+
+        if not self.client:
+            self.connect()
+        if self.client is not None:
+            await asyncio.to_thread(
+                self.client.delete_object,
+                Bucket=bucket,
+                Key=key
             )
 
     async def create_presigned_url(self, bucket: str, key: str, expiry: int = 3600) -> str:
