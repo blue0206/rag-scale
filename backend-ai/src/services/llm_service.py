@@ -70,7 +70,7 @@ def classify_query(state: State) -> State:
 
     # Make LLM call.
     response = llm_client.responses.create(
-        model=env_config["GROQ_MODEL"],
+        model=env_config.GROQ_MODEL,
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
     )
@@ -127,14 +127,14 @@ def normal_query(state: State) -> State:
 
     # Make LLM call with web search mcp.
     stream = llm_client.responses.create(
-        model=env_config["GROQ_MODEL"],
+        model=env_config.GROQ_MODEL,
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
         tools=[
             {
                 "type": "mcp",
                 "server_label": "tavily",
-                "server_url": f"https://mcp.tavily.com/mcp/?tavilyApiKey={env_config['TAVILY_API_KEY']}",
+                "server_url": f"https://mcp.tavily.com/mcp/?tavilyApiKey={env_config.TAVILY_API_KEY}",
                 "require_approval": "never",
             },
         ],
@@ -171,13 +171,13 @@ def retrieval_query(state: State) -> State:
     """
 
     embeddings = OllamaEmbeddings(
-        model=env_config["EMBEDDER_MODEL"],
+        model=env_config.EMBEDDER_MODEL,
         base_url="http://localhost:11434",
     )
 
     vector_db = QdrantVectorStore.from_existing_collection(
         url="http://localhost:6333",
-        collection_name=env_config["RAG_COLLECTION_NAME"],
+        collection_name=env_config.RAG_COLLECTION_NAME,
         embedding=embeddings,
     )
 
@@ -227,7 +227,7 @@ def retrieval_query(state: State) -> State:
     writer = get_stream_writer()
 
     stream = llm_client.responses.create(
-        model=env_config["GROQ_MODEL"],
+        model=env_config.GROQ_MODEL,
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
         stream=True,

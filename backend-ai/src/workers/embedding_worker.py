@@ -9,7 +9,7 @@ from ..models.ingestion import EmbeddingJob, ProgressState
 
 
 embeddings = OllamaEmbeddings(
-    model=env_config["EMBEDDER_MODEL"], base_url="http://localhost:11434"
+    model=env_config.EMBEDDER_MODEL, base_url="http://localhost:11434"
 )
 
 
@@ -33,7 +33,7 @@ def process_chunks(data: EmbeddingJob) -> None:
             documents=documents,
             embedding=embeddings,
             url="http://localhost:6333",
-            collection_name=env_config["RAG_COLLECTION_NAME"],
+            collection_name=env_config.RAG_COLLECTION_NAME,
         )
 
         asyncio.run(

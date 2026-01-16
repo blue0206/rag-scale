@@ -6,7 +6,7 @@ from ..db.s3 import s3_client
 from ..core.config import env_config
 
 
-groq_client = AsyncGroq(api_key=env_config["GROQ_API_KEY"])
+groq_client = AsyncGroq(api_key=env_config.GROQ_API_KEY)
 
 
 async def speech_to_text(file: UploadFile):

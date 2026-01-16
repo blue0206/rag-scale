@@ -1,5 +1,4 @@
 import uvicorn
-from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +11,6 @@ from src.services.pubsub_service import pubsub_service
 from src.services.queue_service import queue_service
 from src.services.batch_tracking_service import batch_tracking_service
 
-load_dotenv()
 app = FastAPI()
 
 # cors

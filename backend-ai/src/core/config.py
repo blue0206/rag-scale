@@ -1,31 +1,34 @@
-import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from functools import lru_cache
 
-if (
-    not os.getenv("GROQ_API_KEY")
-    or not os.getenv("NEO4J_URI")
-    or not os.getenv("NEO4J_USERNAME")
-    or not os.getenv("NEO4J_PASSWORD")
-    or not os.getenv("TAVILY_API_KEY")
-    or not os.getenv("S3_ACCESS_KEY_ID")
-    or not os.getenv("S3_SECRET_ACCESS_KEY")
-    or not os.getenv("MONGO_DB_ROOT_USERNAME")
-    or not os.getenv("MONGO_DB_ROOT_PASSWORD")
-):
-    raise ValueError("Missing one or more environment variables.")
+class Settings(BaseSettings):
+    # Groq
+    GROQ_API_KEY: str
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    # MongoDB
+    MONGO_DB_ROOT_USERNAME: str
+    MONGO_DB_ROOT_PASSWORD: str
+    # Neo4j
+    NEO4J_URI: str
+    NEO4J_USERNAME: str
+    NEO4J_PASSWORD: str
+    # Tavily
+    TAVILY_API_KEY: str
+    # S3
+    S3_ACCESS_KEY_ID: str
+    S3_SECRET_ACCESS_KEY: str
+    # RAG
+    RAG_COLLECTION_NAME: str = "file_embeddings"
+    EMBEDDER_MODEL: str = "nomic-embed-text"
+    # mem0
+    MEM0_COLLECTION_NAME: str = "mem0_store"
 
-env_config = {
-    "GROQ_API_KEY": os.getenv("GROQ_API_KEY"),
-    "NEO4J_URI": os.getenv("NEO4J_URI"),
-    "NEO4J_USERNAME": os.getenv("NEO4J_USERNAME"),
-    "NEO4J_PASSWORD": os.getenv("NEO4J_PASSWORD"),
-    "TAVILY_API_KEY": os.getenv("TAVILY_API_KEY"),
-    "S3_ACCESS_KEY_ID": os.getenv("S3_ACCESS_KEY_ID"),
-    "S3_SECRET_ACCESS_KEY": os.getenv("S3_SECRET_ACCESS_KEY"),
-    "MONGO_DB_ROOT_USERNAME": os.getenv("MONGO_DB_ROOT_USERNAME"),
-    "MONGO_DB_ROOT_PASSWORD": os.getenv("MONGO_DB_ROOT_PASSWORD"),
-    "GROQ_MODEL": "openai/gpt-oss-120b",
-    "GROQ_BASE_URL": "https://api.groq.com/openai/v1",
-    "EMBEDDER_MODEL": "nomic-embed-text",
-    "RAG_COLLECTION_NAME": "file_embeddings",
-    "MEM0_COLLECTION_NAME": "mem0_store",
-}
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+
+@lru_cache
+def get_config() -> Settings:
+    return Settings() # type: ignore
+
+env_config = get_config()

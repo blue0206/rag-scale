@@ -2,7 +2,7 @@ import motor.motor_asyncio
 from ..core.config import env_config
 
 client = motor.motor_asyncio.AsyncIOMotorClient(
-    f"mongodb://{env_config['MONGO_DB_ROOT_USERNAME']}:{env_config['MONGO_DB_ROOT_PASSWORD']}@mongo:27017/ragscale_db?authSource=admin"
+    f"mongodb://{env_config.MONGO_DB_ROOT_USERNAME}:{env_config.MONGO_DB_ROOT_PASSWORD}@mongo:27017/ragscale_db?authSource=admin"
 )
 mongo_client = client.ragscale_db
 
