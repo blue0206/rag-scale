@@ -1,6 +1,6 @@
 # RagScale — Voice-Enabled Agentic RAG System
 
-> **Status:** 🚧 Active Development (Core Backend Logic & Orchestration Complete)
+> **Status:** 🚧 Active Development (All Backend Logic & Orchestration Complete)
 
 An **Agentic AI System** designed to bridge the gap between static RAG retrieval and dynamic conversational flows. This project implements a **Hybrid Memory Architecture** (Vector + Graph) and utilizes **LangGraph** for stateful agent orchestration.
 
@@ -27,8 +27,8 @@ The system maintains user context across sessions using a dual-storage approach:
 To prevent blocking the main thread during heavy PDF processing, ingestion is decoupled using a Producer-Consumer pattern.
 *   **Producer:** Splits documents and pushes jobs to Redis.
 *   **Consumer (Worker):** Processes chunks and generates embeddings in the background.
-*   **📂 Code:** [backend-ai/src/workers/ingestion_worker.py](backend-ai/src/workers/ingestion_worker.py)
-*   **📂 Code:** [backend-ai/src/services/chunking.py](backend-ai/src/services/chunking.py)
+*   **📂 Code:** [backend-ai/src/workers/chunking_worker.py](backend-ai/src/workers/chunking_worker.py)
+*   **📂 Code:** [backend-ai/src/services/embedding_worker.py](backend-ai/src/services/embedding_worker.py)
 
 ### 4. Multimodal Capabilities (Voice)
 Native integration with Groq's STT (Whisper) and TTS (Orpheus) models for voice-enabled interaction.
@@ -68,7 +68,7 @@ The backend core is architecturally complete. Current focus is on the API exposi
 - [x] **Memory System:** Mem0 integration with Neo4j and Qdrant.
 - [x] **Ingestion Pipeline:** Redis Queue setup and Worker logic.
 - [x] **Core Services:** LLM Client, Chunking, and Voice modules.
-- [ ] **API Layer:** Finalizing FastAPI endpoints and SSE Streaming response.
+- [x] **API Layer:** Finalizing FastAPI endpoints and SSE Streaming response.
 - [ ] **Frontend:** React + Vite UI with shadcn/ui (or maybe I'll try Next.js).
 - [ ] **Deployment:** Docker Compose orchestration.
 
