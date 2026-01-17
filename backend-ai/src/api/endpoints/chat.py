@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from ...models.api import ChatForm, ChatRequestBody
 from ...models.chat import ChatEvent
-from ...services.auth_service import get_user_from_token
+from ...core.dependencies import get_current_user
 from ...services.voice_agent import speech_to_text, text_to_speech
 from ...services.llm_service import stream_llm_response
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 @router.post("/chat/text")
 async def chat_handler(
-    req: Request, user_id: str = Depends(get_user_from_token)
+    req: Request, user_id: str = Depends(get_current_user)
 ) -> StreamingResponse:
     """
     This handler tackles text-based chat requests. It authenticates the user and streams
@@ -31,7 +31,7 @@ async def chat_handler(
 
 @router.post("/chat/voice")
 async def voice_handler(
-    form: ChatForm = Depends(), user_id: str = Depends(get_user_from_token)
+    form: ChatForm = Depends(), user_id: str = Depends(get_current_user)
 ) -> StreamingResponse:
     """
     This handler tackles voice-based chat requests. Accepts multipart/form-data with an 'audio' file.
