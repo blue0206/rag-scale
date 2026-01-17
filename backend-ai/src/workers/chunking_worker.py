@@ -1,5 +1,4 @@
 import os
-import asyncio
 from typing import List
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
@@ -17,7 +16,7 @@ FILES_DIR = "/tmp/ragscale_downloads"
 os.makedirs(FILES_DIR, exist_ok=True)
 
 
-async def load_file(
+def load_file(
     user_id: str, batch_id: str, object_key: str, bucket_name: str
 ) -> List[Document]:
     """
@@ -37,7 +36,7 @@ async def load_file(
 
     print(f"Downloading file from s3://{bucket_name}/{object_key} to {path}.")
 
-    await s3_client.download_file_async(bucket=bucket_name, key=object_key, path=path)
+    s3_client.download_file(bucket=bucket_name, key=object_key, path=path)
 
     print("File downloaded. Loading document.")
 
@@ -68,7 +67,7 @@ def split_file(docs: List[Document]) -> List[Document]:
     return chunks
 
 
-async def offload_chunks(user_id: str, batch_id: str, chunks: List[Document]) -> None:
+def offload_chunks(user_id: str, batch_id: str, chunks: List[Document]) -> None:
     """
     This function extracts the text and metadata from the chunks and offloads
     them to the embedding queue for further processing.
@@ -87,10 +86,10 @@ async def offload_chunks(user_id: str, batch_id: str, chunks: List[Document]) ->
     print(f"Chunking complete. Offloading {n} chunks to embedding queue.")
 
     # Update status in batch tracking service.
-    await batch_tracking_service.increment_field(
+    batch_tracking_service.increment_field(
         batch_id=batch_id, field="files_chunked", delta=1
     )
-    await batch_tracking_service.increment_field(
+    batch_tracking_service.increment_field(
         batch_id=batch_id, field="total_chunks", delta=n
     )
 
@@ -133,16 +132,16 @@ def chunk_pdf(data: ChunkingJob) -> None:
         return
 
     try:
-        docs = asyncio.run(load_file(user_id, batch_id, object_key, bucket_name))
+        print("DEBUG: Chunking PDF....")
+        docs = load_file(user_id, batch_id, object_key, bucket_name)
+        print("DEBUG: PDF Chunked...")
         chunks = split_file(docs)
-        asyncio.run(offload_chunks(user_id, batch_id, chunks))
+        offload_chunks(user_id, batch_id, chunks)
     except Exception as e:
         print(f"Error while chunking PDF: {str(e)}")
 
         # Update the batch tracking service and publish failure event.
-        asyncio.run(
-            batch_tracking_service.update_status(batch_id=batch_id, status="FAILED")
-        )
-        asyncio.run(publish_ingestion_failure(user_id=user_id, batch_id=batch_id))
+        batch_tracking_service.update_status(batch_id=batch_id, status="FAILED")
+        publish_ingestion_failure(user_id=user_id, batch_id=batch_id)
 
         raise e

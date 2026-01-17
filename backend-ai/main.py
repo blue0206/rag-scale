@@ -18,17 +18,21 @@ async def lifespan(_: FastAPI):
     # Startup
     print("LIFESPAN: Connecting clients...")
     await setup_db_index()
-    await pubsub_service.connect()
+    pubsub_service.connect()
+    await pubsub_service.connect_async()
     queue_service.connect()
-    await batch_tracking_service.connect()
+    batch_tracking_service.connect()
+    await batch_tracking_service.connect_async()
     s3_client.connect()
 
     yield
     # Shutdown
     print("LIFESPAN: Disonnecting clients...")
-    await pubsub_service.disconnect()
+    pubsub_service.disconnect()
+    await pubsub_service.disconnect_async()
     queue_service.disconnect()
-    await batch_tracking_service.disconnect()
+    batch_tracking_service.disconnect()
+    await batch_tracking_service.disconnect_async()
     s3_client.disconnect()
 
 app = FastAPI(lifespan=lifespan)

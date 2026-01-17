@@ -22,18 +22,25 @@ async def upload_files(
     Uploads files to S3 and enqueues chunking jobs.
     """
 
+    print("DEBUG: Creating entry in batch tracking service.")
+
     batch_id = await batch_tracking_service.create_batch(
         len(files), user_id=user_id
     )
 
+    print("DEBUG: Entry created. Batch ID: ", batch_id)
+
+
     for file in files:
         file_content = await file.read()
+        print("DEBUG: Uploading file to S3....")
         await s3_client.upload_file_async(
             bucket="ragscale-uploads",
             key=f"{batch_id}/{file.filename}",
             file=file_content,
         )
 
+        print("DEBUG: Insering file in queue.")
         queue_service.enqueue_chunking_job(
             user_id=user_id,
             batch_id=batch_id,
@@ -69,7 +76,7 @@ async def get_ingestion_status(req: Request, batch_id: str) -> StreamingResponse
 
         # First we check for the current status in Redis hash and return the result.
         # This is useful in case the ingestion is over before this endpoint is requested.
-        current_status = await batch_tracking_service.get_batch_status(
+        current_status = await batch_tracking_service.get_batch_status_async(
             batch_id=batch_id
         )
         if current_status is not None:
