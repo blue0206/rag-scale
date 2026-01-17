@@ -1,3 +1,4 @@
+import redis
 import redis.asyncio as aioredis
 from typing import Literal
 from uuid import uuid4
@@ -6,34 +7,62 @@ from ..models.ingestion import BatchDetails
 
 class BatchTrackingService:
     def __init__(self, host: str = "localhost", port: int = 6379) -> None:
-        self.redis_client: aioredis.Redis | None = None
+        self.redis_client: redis.Redis | None = None
+        self.aioredis_client: aioredis.Redis | None = None
         self.connection_details = (host, port)
 
-    async def connect(self) -> None:
+    def connect(self) -> None:
         """
         Establish the redis connection.
         """
 
         if not self.redis_client:
-            self.redis_client = aioredis.Redis(
+            self.redis_client = redis.Redis(
                 host=self.connection_details[0],
                 port=self.connection_details[1],
-                db=1,
+                db=0,
                 decode_responses=True,
             )
 
         print("Redis Batch Tracking Service connected.")
 
-    async def disconnect(self) -> None:
+    async def connect_async(self) -> None:
+        """
+        Establish the redis connection for the async client.
+        """
+
+        if not self.aioredis_client:
+            self.aioredis_client = aioredis.Redis(
+                host=self.connection_details[0],
+                port=self.connection_details[1],
+                db=0,
+                decode_responses=True,
+            )
+
+        print("Redis Batch Tracking Service (Async) connected.")
+
+
+    def disconnect(self) -> None:
         """
         Disconnect the redis client.
         """
 
         if self.redis_client:
-            await self.redis_client.close()
+            self.redis_client.close()
             self.redis_client = None
 
         print("Redis Batch Tracking Service disconnected.")
+
+    async def disconnect_async(self) -> None:
+        """
+        Disconnect the async redis client.
+        """
+
+        if self.aioredis_client:
+            await self.aioredis_client.close()
+            self.aioredis_client = None
+
+        print("Redis Batch Tracking Service (Async) disconnected.")
 
     async def create_batch(self, total_files: int, user_id: str) -> str:
         """
@@ -42,10 +71,10 @@ class BatchTrackingService:
 
         batch_id = str(uuid4())
 
-        if not self.redis_client:
-            await self.connect()
-        if self.redis_client is not None:
-            await self.redis_client.hset(
+        if not self.aioredis_client:
+            await self.connect_async()
+        if self.aioredis_client is not None:
+            await self.aioredis_client.hset(
                 f"batch:{batch_id}",
                 mapping={
                     "user_id": user_id,
@@ -59,7 +88,7 @@ class BatchTrackingService:
 
         return batch_id
 
-    async def increment_field(
+    def increment_field(
         self,
         batch_id: str,
         field: Literal["files_chunked", "total_chunks", "chunks_embedded"],
@@ -70,11 +99,11 @@ class BatchTrackingService:
         """
 
         if not self.redis_client:
-            await self.connect()
+            self.connect()
         if self.redis_client is not None:
-            await self.redis_client.hincrby(f"batch:{batch_id}", field, delta)  # type: ignore
+            self.redis_client.hincrby(f"batch:{batch_id}", field, delta)
 
-    async def update_status(
+    def update_status(
         self, batch_id: str, status: Literal["PENDING", "SUCCESS", "FAILED"]
     ) -> None:
         """
@@ -82,19 +111,42 @@ class BatchTrackingService:
         """
 
         if not self.redis_client:
-            await self.connect()
+            self.connect()
         if self.redis_client is not None:
-            await self.redis_client.hset(f"batch:{batch_id}", "status", status)  # type: ignore
-
-    async def get_batch_status(self, batch_id: str) -> BatchDetails | None:
+            self.redis_client.hset(f"batch:{batch_id}", "status", status)
+    
+    def get_batch_status(self, batch_id: str) -> BatchDetails | None:
         """
         Retrieves the current status of the batch.
         """
 
         if not self.redis_client:
-            await self.connect()
+            self.connect()
         if self.redis_client is not None:
-            batch_data = await self.redis_client.hgetall(f"batch:{batch_id}")  # type: ignore
+            data = self.redis_client.hgetall(f"batch:{batch_id}")
+            if not data:
+                return None
+
+            batch_data = BatchDetails.model_validate(data)
+
+            return BatchDetails(
+                user_id=batch_data.user_id,
+                total_files=int(batch_data.total_files),
+                files_chunked=int(batch_data.files_chunked),
+                total_chunks=int(batch_data.total_chunks),
+                chunks_embedded=int(batch_data.chunks_embedded),
+                status=batch_data.status,
+            )
+
+    async def get_batch_status_async(self, batch_id: str) -> BatchDetails | None:
+        """
+        Asynchronously retrieves the current status of the batch.
+        """
+
+        if not self.aioredis_client:
+            await self.connect_async()
+        if self.aioredis_client is not None:
+            batch_data = await self.aioredis_client.hgetall(f"batch:{batch_id}")  # type: ignore
             if not batch_data:
                 return None
 
@@ -108,13 +160,13 @@ class BatchTrackingService:
             )
 
 
-async def check_ingestion_failure(batch_id: str) -> bool:
+def check_ingestion_failure(batch_id: str) -> bool:
     """
     This function checks the current status of batch in redis hash and returns
     True if it is failed or missing, else False.
     """
 
-    batch_details = await batch_tracking_service.get_batch_status(batch_id=batch_id)
+    batch_details = batch_tracking_service.get_batch_status(batch_id=batch_id)
 
     if batch_details is None:
         return True
