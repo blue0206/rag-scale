@@ -15,7 +15,7 @@ from ...models.api import ApiResponse, IngestPayload
 router = APIRouter(prefix="/ingest", tags=["Ingestion"])
 
 
-@router.post("/upload", response_model=ApiResponse[IngestPayload])
+@router.post("/upload", response_model=ApiResponse[IngestPayload], status_code=202)
 async def upload_files(
     files: List[UploadFile] = File(...), user_id: str = Depends(get_current_user)
 ):
@@ -23,37 +23,32 @@ async def upload_files(
     Uploads files to S3 and enqueues chunking jobs.
     """
 
-    try:
-        batch_id = await batch_tracking_service.create_batch(
-            len(files), user_id=user_id
+    batch_id = await batch_tracking_service.create_batch(
+        len(files), user_id=user_id
+    )
+
+    for file in files:
+        file_content = await file.read()
+        await s3_client.upload_file_async(
+            bucket="ragscale-uploads",
+            key=f"{batch_id}/{file.filename}",
+            file=file_content,
         )
 
-        for file in files:
-            file_content = await file.read()
-            await s3_client.upload_file_async(
-                bucket="ragscale-uploads",
-                key=f"{batch_id}/{file.filename}",
-                file=file_content,
-            )
-
-            queue_service.enqueue_chunking_job(
-                user_id=user_id,
-                batch_id=batch_id,
-                object_key=f"{batch_id}/{file.filename}",
-                bucket_name="ragscale-uploads",
-            )
-
-        return ApiResponse(
-            success=True,
-            status_code=202,
-            payload=IngestPayload(
-                message="Files uploaded and ingestion jobs enqueued.", batch_id=batch_id
-            ),
+        queue_service.enqueue_chunking_job(
+            user_id=user_id,
+            batch_id=batch_id,
+            object_key=f"{batch_id}/{file.filename}",
+            bucket_name="ragscale-uploads",
         )
-    except Exception:
-        return ApiResponse(
-            success=False, status_code=500, payload="Internal Server Error"
-        )
+
+    return ApiResponse(
+        success=True,
+        status_code=202,
+        payload=IngestPayload(
+            message="Files uploaded and ingestion jobs enqueued.", batch_id=batch_id
+        ),
+    )
 
 
 @router.get("/status/{batch_id}", dependencies=[Depends(get_current_user)])
