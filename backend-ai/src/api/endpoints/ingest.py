@@ -1,5 +1,4 @@
 import asyncio
-import json
 from fastapi import APIRouter, UploadFile, File, Depends, Request
 from fastapi.responses import StreamingResponse
 from typing import List
@@ -87,7 +86,7 @@ async def get_ingestion_status(req: Request, batch_id: str) -> StreamingResponse
                 else 0,
             )
             # Send the first event.
-            yield f"data: {json.dumps(data)}\n\n"
+            yield f"data: {data.model_dump_json()}\n\n"
 
             # If the batch process already finished, return. No more streaming required.
             if current_status.status == "SUCCESS":

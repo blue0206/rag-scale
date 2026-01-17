@@ -1,4 +1,3 @@
-import json
 from typing import AsyncGenerator, Union
 from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -65,11 +64,11 @@ async def stream_chat(
 
         # 1.---------------- Get the transcribed text from user audio. ---------------
         if is_voice:
-            yield f"data: {json.dumps(ChatEvent(type='status', content='Transcribing audio...'))}\n\n"
+            yield f"data: {ChatEvent(type='status', content='Transcribing audio...').model_dump_json()}\n\n"
 
             # Generate transcription and send it as event too in order to update UI.
             transcribed_text = await speech_to_text(file=data)
-            yield f"data: {json.dumps(ChatEvent(type='transcription', content=transcribed_text))}\n\n"
+            yield f"data: {ChatEvent(type='transcription', content=transcribed_text).model_dump_json()}\n\n"
 
             user_query = transcribed_text
         else:
@@ -77,29 +76,29 @@ async def stream_chat(
 
         # 2.--------- Invoke langgraph workflow to answer the transcribed user query.----------
         # Note that in case user_query was not audio, this is the only executed part of this function.
-        yield f"data: {json.dumps(ChatEvent(type='status', content='Thinking....'))}\n\n"
+        yield f"data: {ChatEvent(type='status', content='Thinking....').model_dump_json()}\n\n"
 
         full_response = ""  # Will be fed to the TTS handler if user query was in voice.
         # Stream LLM response to client.
         async for delta in stream_llm_response(user_id=user_id, user_query=user_query):
             if delta:
                 full_response += delta
-                yield f"data: {json.dumps(ChatEvent(type='text', content=delta))}\n\n"
+                yield f"data: {ChatEvent(type='text', content=delta).model_dump_json()}\n\n"
 
         # 3.---------- If the user query was audio, we provide audio response. -------------
         # We provide accumulated response to TTS handler.
         if is_voice:
-            yield f"data: {json.dumps(ChatEvent(type='status', content='Generating audio....'))}\n\n"
+            yield f"data: {ChatEvent(type='status', content='Generating audio....').model_dump_json()}\n\n"
 
             output_filename = await text_to_speech(
                 transcript=full_response, user_id=user_id
             )
 
             audio_url = f"/audio/{output_filename}"
-            yield f"data: {json.dumps(ChatEvent(type='audio', content=audio_url))}\n\n"
+            yield f"data: {ChatEvent(type='audio', content=audio_url).model_dump_json()}\n\n"
     except Exception as e:
         print(f"Error occurred while streaming for user {user_id}: {str(e)}")
 
-        yield f"data: {json.dumps(ChatEvent(type='error', content=f'An error occurred: {str(e)}'))}\n\n"
+        yield f"data: {ChatEvent(type='error', content=f'An error occurred: {str(e)}').model_dump_json()}\n\n"
     finally:
         print(f"Streaming for user {user_id} has ended.")

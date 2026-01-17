@@ -1,5 +1,4 @@
 import asyncio
-import json
 import redis.asyncio as aioredis
 from typing import AsyncGenerator
 from ..models.ingestion import ProgressState
@@ -55,7 +54,7 @@ class PubSubService:
         if not self.publisher:
             await self.connect()
         if self.publisher is not None:
-            await self.publisher.publish(channel, json.dumps(data))
+            await self.publisher.publish(channel, data.model_dump_json())
 
     async def subscribe(self, channel: str) -> AsyncGenerator[str, None]:
         """
