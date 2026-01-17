@@ -12,7 +12,26 @@ from src.services.pubsub_service import pubsub_service
 from src.services.queue_service import queue_service
 from src.services.batch_tracking_service import batch_tracking_service
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Startup
+    print("LIFESPAN: Connecting clients...")
+    await setup_db_index()
+    await pubsub_service.connect()
+    queue_service.connect()
+    await batch_tracking_service.connect()
+    s3_client.connect()
+
+    yield
+    # Shutdown
+    print("LIFESPAN: Disonnecting clients...")
+    await pubsub_service.disconnect()
+    queue_service.disconnect()
+    await batch_tracking_service.disconnect()
+    s3_client.disconnect()
+
+app = FastAPI(lifespan=lifespan)
 
 # cors
 app.add_middleware(
@@ -22,23 +41,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    # Startup
-    await setup_db_index()
-    await pubsub_service.connect()
-    queue_service.connect()
-    await batch_tracking_service.connect()
-    s3_client.connect()
-
-    yield
-    # Shutdown
-    await pubsub_service.disconnect()
-    queue_service.disconnect()
-    await batch_tracking_service.disconnect()
-    s3_client.disconnect()
 
 
 # Serve static generated audio files.
