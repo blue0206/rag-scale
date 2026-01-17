@@ -1,6 +1,7 @@
+from fastapi.responses import JSONResponse
 import uvicorn
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from src.api.router import api_router
@@ -53,4 +54,16 @@ def root_endpoint() -> ApiResponse[str]:
     )
 
 
-uvicorn.run(app, host="0.0.0.0", port=8000, reload=True, lifespan="on")
+@app.exception_handler(Exception)
+async def global_exception_handler(req: Request, error: Exception) -> JSONResponse:
+    print(f"An unhandled error occurred: {str(error)}")
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "payload": "Internal Server Error"
+        }
+    )
+
+uvicorn.run(app, host="127.0.0.1", port=8000, lifespan="on")
