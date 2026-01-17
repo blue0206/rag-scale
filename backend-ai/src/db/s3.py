@@ -62,6 +62,16 @@ class S3Service:
                 Key=key,
                 Filename=path
             )
+
+    def download_file(self, bucket: str, key: str, path: str) -> None:
+        """
+        Downloads a file from S3 to a local path on the same thread.
+        """
+
+        if not self.client:
+            self.connect()
+        if self.client is not None:
+            self.client.download_file(Bucket=bucket, Key=key, Filename=path)
     
     async def delete_file_async(self, bucket: str, key: str) -> None:
         """
