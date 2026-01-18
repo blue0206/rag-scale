@@ -18,7 +18,7 @@ class QueueService:
 
         if not self.queue_client:
             self.queue_client = Redis(
-                host=self.connection_details[0], port=self.connection_details[1], db=1
+                host=self.connection_details[0], port=self.connection_details[1], db=0
             )
 
             if not self.embedding_queue:
