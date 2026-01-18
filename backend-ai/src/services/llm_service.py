@@ -133,11 +133,12 @@ async def normal_query(state: State) -> State:
     You are an expert AI Assistant. 
     You will receive a user query and based on the query, return a helpful response.
 
-    If you are unable to answer the query or need to perform a web search, use the tavily mcp tool to search for the answer.
+    You have been given access to the tavily mcp server.
+    If the query has a URL, or if you're unable to answer a query and need more data, use the MCP server.
 
     Note that the user query might a be text input by the user, or a transcript of their voice query.
-
     You are also provided with a context about the user:
+    
     {user_context}
     """
 
