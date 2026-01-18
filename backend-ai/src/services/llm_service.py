@@ -37,7 +37,7 @@ async def stream_llm_response(user_id: str, user_query: str) -> AsyncGenerator[s
             await asyncio.sleep(0.01)
 
 
-def classify_query(state: State) -> State:
+async def classify_query(state: State) -> State:
     """
     Makes an LLM call to classify the query as 'NORMAL' | 'RETRIEVAL'.
     """
@@ -69,7 +69,7 @@ def classify_query(state: State) -> State:
     state["messages"] = [{"role": "user", "content": state.get("user_query")}]
 
     # Make LLM call.
-    response = llm_client.responses.create(
+    response = await llm_client.responses.create(
         model=env_config.GROQ_MODEL,
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
@@ -97,7 +97,7 @@ def route_query(state: State) -> Literal["normal_query", "retrieval_query"]:
     return "normal_query"
 
 
-def normal_query(state: State) -> State:
+async def normal_query(state: State) -> State:
     """
     Makes a streaming LLM call to answer the user query and yeilds response
     as chunks.
@@ -126,7 +126,7 @@ def normal_query(state: State) -> State:
     writer = get_stream_writer()
 
     # Make LLM call with web search mcp.
-    stream = llm_client.responses.create(
+    stream = await llm_client.responses.create(
         model=env_config.GROQ_MODEL,
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
@@ -142,7 +142,7 @@ def normal_query(state: State) -> State:
     )
 
     response_text = ""
-    for chunk in stream:
+    async for chunk in stream:
         if chunk.type == "response.output_text.delta":
             response_text += chunk.delta
             writer({"delta": chunk.delta})
@@ -163,7 +163,7 @@ def normal_query(state: State) -> State:
     return state
 
 
-def retrieval_query(state: State) -> State:
+async def retrieval_query(state: State) -> State:
     """
     Converts user query into vector embeddings and performs a vector similarity
     search to retrieve relevant data from vector database to answer the query.
@@ -226,7 +226,7 @@ def retrieval_query(state: State) -> State:
 
     writer = get_stream_writer()
 
-    stream = llm_client.responses.create(
+    stream = await llm_client.responses.create(
         model=env_config.GROQ_MODEL,
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
@@ -234,7 +234,7 @@ def retrieval_query(state: State) -> State:
     )
 
     response_text = ""
-    for chunk in stream:
+    async for chunk in stream:
         if chunk.type == "response.output_text.delta":
             response_text += chunk.delta
             writer({"delta": chunk.delta})
