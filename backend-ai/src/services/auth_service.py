@@ -55,11 +55,11 @@ async def login_user(user_data: AuthRequestBody) -> str:
         raise HTTPException(status_code=500, detail="Something went wrong.")
 
     # Check if user exists and password is correct.
-    if not user or not pwd_context.verify(user_data.password, user.password):
+    if not user or not pwd_context.verify(user_data.password, user.get("password")):
         raise HTTPException(status_code=400, detail="Invalid username or password.")
 
     # Generate session token and return response.
-    session_token = await generate_session_token(user.id)
+    session_token = await generate_session_token(user.get("id"))
 
     return session_token
 
