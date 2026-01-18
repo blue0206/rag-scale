@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     # Groq
     GROQ_API_KEY: str
     GROQ_MODEL: str = "openai/gpt-oss-120b"
+    GROQ_MODEL_MEM0: str = "llama-3.3-70b-versatile"
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
     # MongoDB
     MONGO_DB_ROOT_USERNAME: str

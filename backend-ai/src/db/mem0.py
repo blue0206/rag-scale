@@ -39,7 +39,7 @@ class Mem0Service:
             llm=LlmConfig(
                 provider="groq",
                 config={
-                    "model": env_config.GROQ_MODEL,
+                    "model": env_config.GROQ_MODEL_MEM0,
                     "api_key": env_config.GROQ_API_KEY,
                 },
             ),
