@@ -60,7 +60,8 @@ async def stream_chat(
 
     """
     try:
-        is_voice = isinstance(data, UploadFile)
+        is_voice = not isinstance(data, str)
+        user_query: str
 
         # 1.---------------- Get the transcribed text from user audio. ---------------
         if is_voice:
