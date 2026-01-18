@@ -88,6 +88,7 @@ async def classify_query(state: State) -> State:
         model=env_config.GROQ_MODEL,
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
+        max_output_tokens=100,
     )
 
     # Update state with query type.
@@ -145,6 +146,7 @@ async def normal_query(state: State) -> State:
         model=env_config.GROQ_MODEL,
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
+        max_output_tokens=7900,
         tools=[
             {
                 "type": "mcp",
@@ -225,6 +227,7 @@ async def retrieval_query(state: State) -> State:
         model=env_config.GROQ_MODEL,
         instructions=SYSTEM_PROMPT,
         input=state.get("messages"),
+        max_output_tokens=7900,
         stream=True,
     )
 
