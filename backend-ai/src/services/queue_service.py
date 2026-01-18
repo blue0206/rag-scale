@@ -58,14 +58,11 @@ class QueueService:
         - bucket_name: Name of the S3 bucket.
         """
 
-        # Imported here to prevent circular import issue.
-        from ..workers.chunking_worker import chunk_pdf
-
         if not self.chunking_queue:
             self.connect()
         if self.chunking_queue is not None:
             self.chunking_queue.enqueue(
-                chunk_pdf,
+                "src.workers.chunking_worker.chunk_pdf",
                 ChunkingJob(user_id=user_id, batch_id=batch_id, object_key=object_key, bucket_name=bucket_name),
                 retry=Retry(max=3, interval=[10, 30, 60]),
             )
@@ -80,14 +77,11 @@ class QueueService:
         - chunks: List of document chunks to be processed for generating embeddings.
         """
 
-        # Imported here to prevent circular import issue.
-        from ..workers.embedding_worker import process_chunks
-
         if not self.embedding_queue:
             self.connect()
         if self.embedding_queue is not None:
             self.embedding_queue.enqueue(
-                process_chunks, 
+                "src.workers.embedding_worker.process_chunks", 
                 EmbeddingJob(user_id=user_id, batch_id=batch_id, payload=chunks),
                 retry=Retry(max=3, interval=[10, 30, 60])
             )
