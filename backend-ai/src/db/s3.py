@@ -15,7 +15,7 @@ class S3Service:
 
         self.client = boto3.client(
             "s3",
-            endpoint_url="https://minio:9000",
+            endpoint_url=f"{env_config.MINIO_PUBLIC_URL}",
             aws_access_key_id=env_config.S3_ACCESS_KEY_ID,
             aws_secret_access_key=env_config.S3_SECRET_ACCESS_KEY,
             region_name="ap-south-1",
