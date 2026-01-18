@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from src.api.router import api_router
 from src.core.db import setup_db_index
-from src.models.api import ApiResponse
+from src.models.api import ApiError, ApiResponse
 from src.db.s3 import s3_client
 from src.services.pubsub_service import pubsub_service
 from src.services.queue_service import queue_service
@@ -59,6 +59,18 @@ def root_endpoint() -> ApiResponse[str]:
         success=True, status_code=200, payload="RagScale server is running."
     )
 
+
+@app.exception_handler(ApiError)
+async def api_exception_handler(req: Request, error: ApiError) -> JSONResponse:
+    print("API Exception encountered: ", error)
+
+    return JSONResponse(
+        status_code=error.status_code,
+        content={
+            "success": False,
+            "payload": error.payload
+        }
+    )
 
 @app.exception_handler(Exception)
 async def global_exception_handler(req: Request, error: Exception) -> JSONResponse:

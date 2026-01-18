@@ -1,6 +1,7 @@
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import HTTPException
+from ..models.api import ApiError
 from ..services.auth_service import get_user_from_token
 
 security = HTTPBearer()
@@ -19,9 +20,9 @@ async def get_current_user(
         user_id = await get_user_from_token(token)
         return user_id
     except HTTPException as e:
-        raise e
+        raise ApiError(status_code=e.status_code, payload=e.detail, details=e)
     except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        raise ApiError(status_code=401, payload=str(e), details=None)
 
 
 async def get_user_token(

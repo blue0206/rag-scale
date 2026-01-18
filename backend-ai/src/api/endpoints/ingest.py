@@ -9,7 +9,7 @@ from ...db.s3 import s3_client
 from ...services.batch_tracking_service import batch_tracking_service
 from ...services.queue_service import queue_service
 from ...services.pubsub_service import pubsub_service
-from ...models.api import ApiResponse, IngestPayload
+from ...models.api import ApiError, ApiResponse, IngestPayload
 
 router = APIRouter(prefix="/ingest", tags=["Ingestion"])
 
@@ -22,39 +22,42 @@ async def upload_files(
     Uploads files to S3 and enqueues chunking jobs.
     """
 
-    print("DEBUG: Creating entry in batch tracking service.")
+    try:
+        print("DEBUG: Creating entry in batch tracking service.")
 
-    batch_id = await batch_tracking_service.create_batch(
-        len(files), user_id=user_id
-    )
-
-    print("DEBUG: Entry created. Batch ID: ", batch_id)
-
-
-    for file in files:
-        file_content = await file.read()
-        print("DEBUG: Uploading file to S3....")
-        await s3_client.upload_file_async(
-            bucket="ragscale-uploads",
-            key=f"{batch_id}/{file.filename}",
-            file=file_content,
+        batch_id = await batch_tracking_service.create_batch(
+            len(files), user_id=user_id
         )
 
-        print("DEBUG: Insering file in queue.")
-        queue_service.enqueue_chunking_job(
-            user_id=user_id,
-            batch_id=batch_id,
-            object_key=f"{batch_id}/{file.filename}",
-            bucket_name="ragscale-uploads",
-        )
+        print("DEBUG: Entry created. Batch ID: ", batch_id)
 
-    return ApiResponse(
-        success=True,
-        status_code=202,
-        payload=IngestPayload(
-            message="Files uploaded and ingestion jobs enqueued.", batch_id=batch_id
-        ),
-    )
+
+        for file in files:
+            file_content = await file.read()
+            print("DEBUG: Uploading file to S3....")
+            await s3_client.upload_file_async(
+                bucket="ragscale-uploads",
+                key=f"{batch_id}/{file.filename}",
+                file=file_content,
+            )
+
+            print("DEBUG: Inserting file in queue.")
+            queue_service.enqueue_chunking_job(
+                user_id=user_id,
+                batch_id=batch_id,
+                object_key=f"{batch_id}/{file.filename}",
+                bucket_name="ragscale-uploads",
+            )
+
+        return ApiResponse(
+            success=True,
+            status_code=202,
+            payload=IngestPayload(
+                message="Files uploaded and ingestion jobs enqueued.", batch_id=batch_id
+            ),
+        )
+    except Exception as e:
+        raise ApiError(status_code=500, payload=str(e), details=None)
 
 
 @router.get("/status/{batch_id}", dependencies=[Depends(get_current_user)])

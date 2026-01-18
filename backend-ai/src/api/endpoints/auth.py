@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from ...core.dependencies import get_user_token
-from src.models.api import ApiResponse, AuthRequestBody
+from src.models.api import ApiError, ApiResponse, AuthRequestBody
 from src.services.auth_service import login_user, logout_user, register_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -17,11 +17,9 @@ async def register(user_data: AuthRequestBody) -> ApiResponse[str]:
         session_token = await register_user(user_data)
         return ApiResponse(success=True, status_code=201, payload=session_token)
     except HTTPException as e:
-        return ApiResponse(success=False, status_code=e.status_code, payload=e.detail)
-    except Exception:
-        return ApiResponse(
-            success=False, status_code=500, payload="Internal Server Error"
-        )
+        raise ApiError(status_code=e.status_code, payload=e.detail, details=e)
+    except Exception as e:
+        raise ApiError(status_code=500, payload="Internal Server Error", details=e)
 
 
 @router.post("/login", response_model=ApiResponse[str])
@@ -35,11 +33,9 @@ async def login(user_data: AuthRequestBody) -> ApiResponse[str]:
         session_token = await login_user(user_data)
         return ApiResponse(success=True, status_code=200, payload=session_token)
     except HTTPException as e:
-        return ApiResponse(success=False, status_code=e.status_code, payload=e.detail)
-    except Exception:
-        return ApiResponse(
-            success=False, status_code=500, payload="Internal Server Error"
-        )
+        raise ApiError(status_code=e.status_code, payload=e.detail, details=e)
+    except Exception as e:
+        raise ApiError(status_code=500, payload="Internal Server Error", details=e)
 
 
 @router.post("/logout", response_model=ApiResponse[None])
