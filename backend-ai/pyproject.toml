@@ -48,7 +48,6 @@ dependencies = [
     "fastapi[standard]",
     "uvicorn",
     "redis",
-    "rq",
     "python-multipart",
     "pypdf",
     "langchain-community>=0.4.1",
@@ -59,4 +58,5 @@ dependencies = [
     "boto3>=1.42.29",
     "types-boto3[essential]>=1.42.29",
     "pydantic-settings>=2.12.0",
+    "rq>=2.6.1",
 ]
