@@ -1,18 +1,21 @@
 from typing import AsyncGenerator, Union
-from fastapi import APIRouter, Depends, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from ...models.api import ChatForm, ChatRequestBody
 from ...models.chat import ChatEvent
 from ...core.dependencies import get_current_user
 from ...services.voice_agent import speech_to_text, text_to_speech
 from ...services.llm_service import stream_llm_response
+from ...db.mem0 import mem0_client
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 @router.post("/chat/text")
 async def chat_handler(
-    req: Request, user_id: str = Depends(get_current_user)
+    background_tasks: BackgroundTasks,
+    req: Request,
+    user_id: str = Depends(get_current_user),
 ) -> StreamingResponse:
     """
     This handler tackles text-based chat requests. It authenticates the user and streams
@@ -23,14 +26,20 @@ async def chat_handler(
     validated_body = ChatRequestBody.model_validate(body)
 
     return StreamingResponse(
-        stream_chat(data=validated_body.query, user_id=user_id),
+        stream_chat(
+            data=validated_body.query,
+            user_id=user_id,
+            background_tasks=background_tasks,
+        ),
         media_type="text/event-stream",
     )
 
 
 @router.post("/chat/voice")
 async def voice_handler(
-    form: ChatForm = Depends(), user_id: str = Depends(get_current_user)
+    background_tasks: BackgroundTasks,
+    form: ChatForm = Depends(),
+    user_id: str = Depends(get_current_user),
 ) -> StreamingResponse:
     """
     This handler tackles voice-based chat requests. Accepts multipart/form-data with an 'audio' file.
@@ -39,12 +48,17 @@ async def voice_handler(
     """
 
     return StreamingResponse(
-        stream_chat(data=form.audio, user_id=user_id), media_type="text/event-stream"
+        stream_chat(
+            data=form.audio, user_id=user_id, background_tasks=background_tasks
+        ),
+        media_type="text/event-stream",
     )
 
 
 async def stream_chat(
-    data: Union[UploadFile, str], user_id: str
+    data: Union[UploadFile, str],
+    user_id: str,
+    background_tasks: BackgroundTasks,
 ) -> AsyncGenerator[str, None]:
     """
     This function handles core streaming based on the type of query provided.
@@ -97,6 +111,18 @@ async def stream_chat(
 
             audio_url = f"/audio/{output_filename}"
             yield f"data: {ChatEvent(type='audio', content=audio_url).model_dump_json()}\n\n"
+
+        # 4.--------Update memory with mem0 in the background once the response is returned.----------
+        # mem0 handles updating factual, episodic, and semantic memory.
+        # This process is CPU-intensive and hence blocks the server. Therefore, we use an
+        background_tasks.add_task(
+            mem0_client.add_memories,
+            user_id,
+            [
+                {"role": "user", "content": user_query},
+                {"role": "assistant", "content": full_response},
+            ],
+        )
     except Exception as e:
         print(f"Error occurred while streaming for user {user_id}: {str(e)}")
 

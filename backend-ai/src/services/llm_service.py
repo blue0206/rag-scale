@@ -22,7 +22,7 @@ embeddings = OllamaEmbeddings(
 vector_db = QdrantVectorStore.from_existing_collection(
     url="http://localhost:6333",
     collection_name=env_config.RAG_COLLECTION_NAME,
-    embedding=embeddings
+    embedding=embeddings,
 )
 
 
@@ -164,17 +164,6 @@ async def normal_query(state: State) -> State:
 
     # Update state messages with final response.
     state["messages"] = [{"role": "assistant", "content": response_text}]
-
-    # mem0 handles updating factual, episodic, and semantic memory
-    # about user based on provided messages.
-    await mem0_client.add_memories(
-        user_id=state.get("user_id"),
-        messages=[
-            {"role": "user", "content": state.get("user_query")},
-            {"role": "assistant", "content": response_text},
-        ],
-    )
-
     return state
 
 
@@ -247,17 +236,6 @@ async def retrieval_query(state: State) -> State:
 
     # Update state messages with final response.
     state["messages"] = [{"role": "assistant", "content": response_text}]
-
-    # mem0 handles updating factual, episodic, and semantic memory
-    # about user based on provided messages.
-    await mem0_client.add_memories(
-        user_id=state.get("user_id"),
-        messages=[
-            {"role": "user", "content": state.get("user_query")},
-            {"role": "assistant", "content": response_text},
-        ],
-    )
-
     return state
 
 
