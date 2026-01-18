@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # S3
     S3_ACCESS_KEY_ID: str
     S3_SECRET_ACCESS_KEY: str
+    MINIO_PUBLIC_URL: str
     # RAG
     RAG_COLLECTION_NAME: str = "file_embeddings"
     EMBEDDER_MODEL: str = "nomic-embed-text"
