@@ -43,9 +43,7 @@ async def classify_query(state: State) -> State:
     """
 
     # Search mem0 for user context.
-    mem_search = mem0_client.search(
-        query=state.get("user_query"), user_id=state.get("user_id")
-    )
+    mem_search = await mem0_client.search_memories(user_query=state.get("user_query"), user_id=state.get("user_id"))
 
     mem_list = [entry.get("memory") for entry in mem_search.get("results", [])]
     user_context = "\n".join(f"- {mem}" for mem in mem_list)
@@ -104,9 +102,7 @@ async def normal_query(state: State) -> State:
     """
 
     # Search mem0 for user context.
-    mem_search = mem0_client.search(
-        query=state.get("user_query"), user_id=state.get("user_id")
-    )
+    mem_search = await mem0_client.search_memories(user_query=state.get("user_query"), user_id=state.get("user_id"))
 
     mem_list = [entry.get("memory") for entry in mem_search.get("results", [])]
     user_context = "\n".join(f"- {mem}" for mem in mem_list)
@@ -152,12 +148,12 @@ async def normal_query(state: State) -> State:
 
     # mem0 handles updating factual, episodic, and semantic memory
     # about user based on provided messages.
-    mem0_client.add(
+    await mem0_client.add_memories(
         user_id=state.get("user_id"),
         messages=[
             {"role": "user", "content": state.get("user_query")},
             {"role": "assistant", "content": response_text},
-        ],
+        ]
     )
 
     return state
@@ -201,9 +197,7 @@ async def retrieval_query(state: State) -> State:
     ]
 
     # Search mem0 for user context.
-    mem_search = mem0_client.search(
-        query=state.get("user_query"), user_id=state.get("user_id")
-    )
+    mem_search = await mem0_client.search_memories(user_query=state.get("user_query"), user_id=state.get("user_id"))
 
     mem_list = [entry.get("memory") for entry in mem_search.get("results", [])]
     user_context = "\n".join(f"- {mem}" for mem in mem_list)
@@ -244,7 +238,7 @@ async def retrieval_query(state: State) -> State:
 
     # mem0 handles updating factual, episodic, and semantic memory
     # about user based on provided messages.
-    mem0_client.add(
+    await mem0_client.add_memories(
         user_id=state.get("user_id"),
         messages=[
             {"role": "user", "content": state.get("user_query")},
