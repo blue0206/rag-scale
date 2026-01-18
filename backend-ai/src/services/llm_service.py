@@ -188,7 +188,7 @@ def retrieval_query(state: State) -> State:
         filter=Filter(
             must=[
                 FieldCondition(
-                    key="user_ID", match=MatchValue(value=state.get("user_id"))
+                    key="metadata.user_id", match=MatchValue(value=state.get("user_id"))
                 )
             ]
         ),
