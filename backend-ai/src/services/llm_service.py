@@ -1,19 +1,34 @@
 import asyncio
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 from typing import AsyncGenerator, Literal
-from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import InMemorySaver
+from langchain_ollama import OllamaEmbeddings
 from langchain_core.runnables import RunnableConfig
 from langgraph.config import get_stream_writer
+from ..core.utils import get_query_embeddings
 from ..core.config import env_config
 from ..models.chat import State
 from ..core.llm_client import llm_client
 from ..db.mem0 import mem0_client
 
 
-async def stream_llm_response(user_id: str, user_query: str) -> AsyncGenerator[str, None]:
+embeddings = OllamaEmbeddings(
+    model=env_config.EMBEDDER_MODEL,
+    base_url="http://localhost:11434",
+)
+
+vector_db = QdrantVectorStore.from_existing_collection(
+    url="http://localhost:6333",
+    collection_name=env_config.RAG_COLLECTION_NAME,
+    embedding=embeddings
+)
+
+
+async def stream_llm_response(
+    user_id: str, user_query: str
+) -> AsyncGenerator[str, None]:
     """
     Invokes the langgraph workflow and streams the response as SSE.
     """
@@ -43,7 +58,9 @@ async def classify_query(state: State) -> State:
     """
 
     # Search mem0 for user context.
-    mem_search = await mem0_client.search_memories(user_query=state.get("user_query"), user_id=state.get("user_id"))
+    mem_search = await mem0_client.search_memories(
+        user_query=state.get("user_query"), user_id=state.get("user_id")
+    )
 
     mem_list = [entry.get("memory") for entry in mem_search.get("results", [])]
     user_context = "\n".join(f"- {mem}" for mem in mem_list)
@@ -102,7 +119,9 @@ async def normal_query(state: State) -> State:
     """
 
     # Search mem0 for user context.
-    mem_search = await mem0_client.search_memories(user_query=state.get("user_query"), user_id=state.get("user_id"))
+    mem_search = await mem0_client.search_memories(
+        user_query=state.get("user_query"), user_id=state.get("user_id")
+    )
 
     mem_list = [entry.get("memory") for entry in mem_search.get("results", [])]
     user_context = "\n".join(f"- {mem}" for mem in mem_list)
@@ -153,7 +172,7 @@ async def normal_query(state: State) -> State:
         messages=[
             {"role": "user", "content": state.get("user_query")},
             {"role": "assistant", "content": response_text},
-        ]
+        ],
     )
 
     return state
@@ -166,21 +185,12 @@ async def retrieval_query(state: State) -> State:
     The retrieved data is then sent to the LLM to generate a response.
     """
 
-    embeddings = OllamaEmbeddings(
-        model=env_config.EMBEDDER_MODEL,
-        base_url="http://localhost:11434",
-    )
-
-    vector_db = QdrantVectorStore.from_existing_collection(
-        url="http://localhost:6333",
-        collection_name=env_config.RAG_COLLECTION_NAME,
-        embedding=embeddings,
-    )
+    query_embedding = await get_query_embeddings(state.get("user_query"))
 
     # Perform vector similarity search with user query and filter by user ID.
     # This ensures that the search is only performed on the user's documents.
-    search_results = vector_db.similarity_search(
-        query=state.get("user_query"),
+    search_results = await vector_db.asimilarity_search_by_vector(
+        embedding=query_embedding,
         filter=Filter(
             must=[
                 FieldCondition(
@@ -197,7 +207,9 @@ async def retrieval_query(state: State) -> State:
     ]
 
     # Search mem0 for user context.
-    mem_search = await mem0_client.search_memories(user_query=state.get("user_query"), user_id=state.get("user_id"))
+    mem_search = await mem0_client.search_memories(
+        user_query=state.get("user_query"), user_id=state.get("user_id")
+    )
 
     mem_list = [entry.get("memory") for entry in mem_search.get("results", [])]
     user_context = "\n".join(f"- {mem}" for mem in mem_list)
