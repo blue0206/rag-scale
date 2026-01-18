@@ -72,6 +72,8 @@ async def classify_query(state: State) -> State:
     'NORMAL' - If the query is a normal chat query not involving document look-up.
     'RETRIEVAL' - If the query is related to a document.
 
+    If the query involves a URL and asks to visit a website or make a web search, it should be classified as 'NORMAL' query.
+
     You are also provided with a context about the user:
     {user_context}
 
