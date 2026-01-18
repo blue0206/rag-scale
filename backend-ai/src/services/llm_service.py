@@ -102,7 +102,7 @@ async def classify_query(state: State) -> State:
     return state
 
 
-def route_query(state: State) -> Literal["normal_query", "retrieval_query"]:
+async def route_query(state: State) -> Literal["normal_query", "retrieval_query"]:
     """
     Routes the query to the appropriate node.
     """
