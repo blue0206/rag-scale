@@ -28,8 +28,6 @@ def process_chunks(data: EmbeddingJob) -> None:
             for payload in data.payload
         ]
 
-        print("DEBUG: Generating embeddings...")
-
         QdrantVectorStore.from_documents(
             documents=documents,
             embedding=embeddings,

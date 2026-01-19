@@ -132,9 +132,7 @@ def chunk_pdf(data: ChunkingJob) -> None:
         return
 
     try:
-        print("DEBUG: Chunking PDF....")
         docs = load_file(user_id, batch_id, object_key, bucket_name)
-        print("DEBUG: PDF Chunked...")
         chunks = split_file(docs)
         offload_chunks(user_id, batch_id, chunks)
     except Exception as e:

@@ -23,25 +23,20 @@ async def upload_files(
     """
 
     try:
-        print("DEBUG: Creating entry in batch tracking service.")
-
         batch_id = await batch_tracking_service.create_batch(
             len(files), user_id=user_id
         )
 
-        print("DEBUG: Entry created. Batch ID: ", batch_id)
-
 
         for file in files:
             file_content = await file.read()
-            print("DEBUG: Uploading file to S3....")
+
             await s3_client.upload_file_async(
                 bucket="ragscale-uploads",
                 key=f"{batch_id}/{file.filename}",
                 file=file_content,
             )
 
-            print("DEBUG: Inserting file in queue.")
             queue_service.enqueue_chunking_job(
                 user_id=user_id,
                 batch_id=batch_id,
