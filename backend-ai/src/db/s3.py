@@ -1,6 +1,7 @@
 import asyncio
 import boto3
 from types_boto3_s3 import S3Client
+from types_boto3_s3.type_defs import ObjectIdentifierTypeDef
 from ..core.config import env_config
 
 
@@ -104,5 +105,28 @@ class S3Service:
             )
 
         return url
+    
+    def delete_batch(self, batch_id: str, bucket: str) -> None:
+        """
+        Deletes a batch of items from S3 storage bucket synchronously.
+        """
+
+        if not self.client:
+            self.connect()
+        if self.client is not None:
+            delete_items = self.client.list_objects_v2(
+                Bucket=bucket,
+                Prefix=f"{batch_id}/"
+            )
+
+            if "Contents" in delete_items:
+                delete_keys = [ObjectIdentifierTypeDef(Key=val.get('Key', "")) for val in delete_items['Contents']]
+
+                self.client.delete_objects(
+                    Bucket=bucket,
+                    Delete={'Objects': delete_keys}
+                )
+                print(f"Cleaned up objects of batch {batch_id}")
+
 
 s3_client = S3Service()

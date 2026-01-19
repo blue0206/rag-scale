@@ -14,6 +14,9 @@ class EmbeddingPayload(BaseModel):
     metadata: Dict
 
 
+class CleanupJob(BaseModel):
+    batch_id: str
+
 class EmbeddingJob(BaseModel):
     user_id: str
     batch_id: str

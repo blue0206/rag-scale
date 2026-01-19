@@ -1,7 +1,7 @@
 from redis import Redis
 from rq import Queue, Retry
 from typing import List
-from ..models.ingestion import ChunkingJob, EmbeddingJob
+from ..models.ingestion import ChunkingJob, CleanupJob, EmbeddingJob
 
 
 class QueueService:
@@ -10,6 +10,7 @@ class QueueService:
         self.connection_details = (host, port)
         self.chunking_queue: Queue | None = None
         self.embedding_queue: Queue | None = None
+        self.cleanup_queue: Queue | None = None
 
     def connect(self) -> None:
         """
@@ -30,6 +31,10 @@ class QueueService:
                 self.chunking_queue = Queue(
                     name="chunking_queue", connection=self.queue_client
                 )
+            if not self.cleanup_queue:
+                self.cleanup_queue = Queue(
+                    name="cleanup_queue", connection=self.queue_client
+                )
         print("Redis Queue client connected.")
 
     def disconnect(self) -> None:
@@ -42,12 +47,13 @@ class QueueService:
             self.queue_client = None
             self.chunking_queue = None
             self.embedding_queue = None
+            self.cleanup_queue = None
 
         print("Redis Queue client disconnected.")
 
     def enqueue_chunking_job(
         self, *, user_id: str, batch_id: str, object_key: str, bucket_name: str
-    ):
+    ) -> None:
         """
         Enqueues a chunking job to the chunking queue.
         This method accepts the following parameters:
@@ -67,7 +73,7 @@ class QueueService:
                 retry=Retry(max=3, interval=[10, 30, 60]),
             )
 
-    def enqueue_embedding_job(self, *, user_id: str, batch_id: str, chunks: List):
+    def enqueue_embedding_job(self, *, user_id: str, batch_id: str, chunks: List) -> None:
         """
         Enqueues an embedding job to the embedding queue.
         This method accepts the following parameters:
@@ -86,5 +92,21 @@ class QueueService:
                 retry=Retry(max=3, interval=[10, 30, 60])
             )
 
+    def enqueue_cleaning_job(self, *, batch_id: str) -> None:
+        """
+        Enqueues a cleaning job to the cleaning queue to delete uploaded batch from S3 storage.
+        This method accepts the following parameters:
+
+        - batch_id: ID of the batch.
+        """
+
+        if not self.cleanup_queue:
+            self.connect()
+        if self.cleanup_queue is not None:
+            self.cleanup_queue.enqueue(
+                "src.workers.cleanup_worker.cleanup_s3_batch",
+                CleanupJob(batch_id=batch_id),
+                retry=Retry(max=3, interval=[10, 30, 60])
+            )
 
 queue_service = QueueService()

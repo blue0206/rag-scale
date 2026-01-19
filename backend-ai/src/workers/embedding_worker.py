@@ -4,6 +4,7 @@ from langchain_core.documents import Document
 from ..core.config import env_config
 from ..services.pubsub_service import pubsub_service, publish_ingestion_failure
 from ..services.batch_tracking_service import batch_tracking_service, check_ingestion_failure
+from ..services.queue_service import queue_service
 from ..models.ingestion import EmbeddingJob, ProgressState
 
 
@@ -93,6 +94,10 @@ def update_embedding_status(user_id: str, batch_id: str, n: int) -> None:
                 details=f"The file(s) have been processed successfully.\nSummary:\n- Total Files: {batch_status.total_files}\n- Total Chunks: {batch_status.total_chunks}",
             ),
         )
+
+        # Pass batch details to cleanup queue for cleaning up files uploaded to S3 storage.
+        queue_service.enqueue_cleaning_job(batch_id=batch_id)
+        print("Cleanup job has been enqueued.")
 
     # If not all chunks are embedded, publish progress update.
     else:
