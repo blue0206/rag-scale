@@ -106,7 +106,7 @@ async def stream_chat(
             yield f"data: {ChatEvent(type='status', content='Generating audio....').model_dump_json()}\n\n"
 
             output_filename = await text_to_speech(
-                transcript=full_response, user_id=user_id
+                transcript=full_response, user_id=user_id, background_tasks=background_tasks
             )
 
             audio_url = f"/audio/{output_filename}"
