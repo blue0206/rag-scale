@@ -1,3 +1,4 @@
 api: uvicorn main:app --reload
 chunking_worker: rq worker chunking_queue
 embedding_worker: rq worker embedding_queue
+cleanup_worker: rq worker cleanup_queue
