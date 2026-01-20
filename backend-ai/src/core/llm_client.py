@@ -33,8 +33,7 @@ class LLMService:
         if not self.client:
             self.connect()
 
-        assert self.client is AsyncOpenAI
-        return self.client
+        return self.client # type: ignore
 
 llm_service = LLMService(api_key=env_config.GROQ_API_KEY, base_url=env_config.GROQ_BASE_URL)
 llm_client = llm_service.get_client()
