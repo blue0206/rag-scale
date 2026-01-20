@@ -1,6 +1,8 @@
 # RagScale — Voice-Enabled Agentic RAG System
 
 
+> **Live Demo / Walkthrough:** [Loom Walkthrough](https://www.loom.com/share/50f43d75e4664e4284fd1eab451e38e9)
+
 RagScale is a production-grade **Agentic AI Platform** designed to solve the latency and state management issues typical in RAG applications. It moves beyond simple "Chat with PDF" wrappers by implementing a **Multi-Stage Asynchronous Ingestion Pipeline**, **Hybrid Memory Architecture** (Vector + Graph), and **Voice-Native Interaction**.
 
 ---
