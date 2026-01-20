@@ -27,6 +27,9 @@ class LLMService:
             print("Async OpenAI Client disconnected.")
 
     def get_client(self) -> AsyncOpenAI:
+        """
+        Returns the async OpenAI client.
+        """
         if not self.client:
             self.connect()
 
