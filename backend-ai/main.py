@@ -8,7 +8,6 @@ from src.api.router import api_router
 from src.core.db import setup_db_index
 from src.models.api import ApiError, ApiResponse
 from src.db.s3 import s3_client
-from src.core.llm_client import llm_service
 from src.services.pubsub_service import pubsub_service
 from src.services.queue_service import queue_service
 from src.services.batch_tracking_service import batch_tracking_service
@@ -19,7 +18,6 @@ async def lifespan(_: FastAPI):
     # Startup
     print("LIFESPAN: Connecting clients...")
     await setup_db_index()
-    llm_service.connect()
     pubsub_service.connect()
     await pubsub_service.connect_async()
     queue_service.connect()
@@ -30,7 +28,6 @@ async def lifespan(_: FastAPI):
     yield
     # Shutdown
     print("LIFESPAN: Disonnecting clients...")
-    await llm_service.disconnect()
     pubsub_service.disconnect()
     await pubsub_service.disconnect_async()
     queue_service.disconnect()

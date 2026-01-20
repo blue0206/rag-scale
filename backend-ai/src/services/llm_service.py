@@ -10,9 +10,8 @@ from langgraph.config import get_stream_writer
 from ..core.utils import get_query_embeddings
 from ..core.config import env_config
 from ..models.chat import State
-from ..core.llm_client import llm_client
+from ..core.llm_client import llm_service
 from ..db.mem0 import mem0_client
-
 
 embeddings = OllamaEmbeddings(
     model=env_config.EMBEDDER_MODEL,
@@ -86,12 +85,13 @@ async def classify_query(state: State) -> State:
     state["messages"] = [{"role": "user", "content": state.get("user_query")}]
 
     # Make LLM call.
-    response = await llm_client.responses.create(
-        model=env_config.GROQ_MODEL,
-        instructions=SYSTEM_PROMPT,
-        input=state.get("messages"),
-        max_output_tokens=100,
-    )
+    async with llm_service.get_client() as llm_client:
+        response = await llm_client.responses.create(
+            model=env_config.GROQ_MODEL,
+            instructions=SYSTEM_PROMPT,
+            input=state.get("messages"),
+            max_output_tokens=100,
+        )
 
     # Update state with query type.
     output_text = response.output_text.strip().upper()
@@ -145,27 +145,29 @@ async def normal_query(state: State) -> State:
     writer = get_stream_writer()
 
     # Make LLM call with web search mcp.
-    stream = await llm_client.responses.create(
-        model=env_config.GROQ_MODEL,
-        instructions=SYSTEM_PROMPT,
-        input=state.get("messages"),
-        max_output_tokens=7900,
-        tools=[
-            {
-                "type": "mcp",
-                "server_label": "tavily",
-                "server_url": f"https://mcp.tavily.com/mcp/?tavilyApiKey={env_config.TAVILY_API_KEY}",
-                "require_approval": "never",
-            },
-        ],
-        stream=True,
-    )
+    async with llm_service.get_client() as llm_client:
+        stream = await llm_client.responses.create(
+            model=env_config.GROQ_MODEL,
+            instructions=SYSTEM_PROMPT,
+            input=state.get("messages"),
+            max_output_tokens=7900,
+            tools=[
+                {
+                    "type": "mcp",
+                    "server_label": "tavily",
+                    "server_url": f"https://mcp.tavily.com/mcp/?tavilyApiKey={env_config.TAVILY_API_KEY}",
+                    "require_approval": "never",
+                },
+            ],
+            stream=True,
+        )
 
-    response_text = ""
-    async for chunk in stream:
-        if chunk.type == "response.output_text.delta":
-            response_text += chunk.delta
-            writer({"delta": chunk.delta})
+        response_text = ""
+        async for chunk in stream:
+            if chunk.type == "response.output_text.delta":
+                print(chunk.delta, end="")
+                response_text += chunk.delta
+                writer({"delta": chunk.delta})
 
     # Update state messages with final response.
     state["messages"] = [{"role": "assistant", "content": response_text}]
@@ -226,19 +228,20 @@ async def retrieval_query(state: State) -> State:
 
     writer = get_stream_writer()
 
-    stream = await llm_client.responses.create(
-        model=env_config.GROQ_MODEL,
-        instructions=SYSTEM_PROMPT,
-        input=state.get("messages"),
-        max_output_tokens=7900,
-        stream=True,
-    )
+    async with llm_service.get_client() as llm_client:
+        stream = await llm_client.responses.create(
+            model=env_config.GROQ_MODEL,
+            instructions=SYSTEM_PROMPT,
+            input=state.get("messages"),
+            max_output_tokens=7900,
+            stream=True,
+        )
 
-    response_text = ""
-    async for chunk in stream:
-        if chunk.type == "response.output_text.delta":
-            response_text += chunk.delta
-            writer({"delta": chunk.delta})
+        response_text = ""
+        async for chunk in stream:
+            if chunk.type == "response.output_text.delta":
+                response_text += chunk.delta
+                writer({"delta": chunk.delta})
 
     # Update state messages with final response.
     state["messages"] = [{"role": "assistant", "content": response_text}]
