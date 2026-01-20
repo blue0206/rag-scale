@@ -1,74 +1,48 @@
 # RagScale — Voice-Enabled Agentic RAG System
 
-> **Status:** 🚧 Active Development (All Backend Logic & Orchestration Complete)
 
-An **Agentic AI System** designed to bridge the gap between static RAG retrieval and dynamic conversational flows. This project implements a **Hybrid Memory Architecture** (Vector + Graph) and utilizes **LangGraph** for stateful agent orchestration.
-
-This system features an asynchronous ingestion pipeline, semantic intent classification, and long-term user personalization via Mem0.
+RagScale is a production-grade **Agentic AI Platform** designed to solve the latency and state management issues typical in RAG applications. It moves beyond simple "Chat with PDF" wrappers by implementing a **Multi-Stage Asynchronous Ingestion Pipeline**, **Hybrid Memory Architecture** (Vector + Graph), and **Voice-Native Interaction**.
 
 ---
 
-## 🏗️ System Architecture & Code Tour
+## 🏗️ System Architecture
 
-The core logic of the application is fully implemented. Start your review here to understand the architectural patterns used.
+The system is architected as a distributed application using **FastAPI** for the interface and **Redis** as the backbone for state and messaging.
 
-### 1. Agent Orchestration (LangGraph)
-Instead of a linear chain, the agent uses a state graph with checkpointing to reason, route, and execute.
-*   **Key Logic:** Conditional routing between "General Chat" and "RAG Retrieval" based on intent.
-*   **📂 Code:** [backend-ai/src/services/llm_service.py](backend-ai/src/services/llm_service.py)
+### 1. The "Two-Queue" Ingestion Pipeline
+To handle high-volume document processing without blocking the API, ingestion is decoupled into a multi-stage distributed workflow:
+1.  **Stage 1 (Chunking Worker):** Pulls PDFs from S3 (MinIO), splits them into semantic chunks.
+2.  **Stage 2 (Embedding Worker):** Generates embeddings via **Ollama** and upserts to **Qdrant**.
+*   **Atomic Tracking:** Real-time progress is tracked via **Redis Hashes** and streamed to the client via **Server-Sent Events (SSE)**.
+*   **📂 Code:** [src/services/queue_service.py](backend-ai/src/services/queue_service.py)
 
-### 2. Hybrid Memory Layer (Mem0 + Neo4j + Qdrant)
-The system maintains user context across sessions using a dual-storage approach:
-*   **Vector Store (Qdrant):** For semantic search and RAG context.
-*   **Graph Store (Neo4j):** For relationship mapping and entity tracking via Mem0.
-*   **📂 Code:** [backend-ai/src/db/mem0.py](backend-ai/src/db/mem0.py)
+### 2. Stateful Agent Orchestration (LangGraph)
+The cognitive engine uses a graph architecture.
+*   **Routing Node:** Classifies intent (General Chat vs. RAG vs. Web Search) using **Groq (OpenAI GPT-OSS-120B)**.
+*   **Tool Use:** Integrated **Tavily MCP** for live web search/extraction as per need.
+*   **Memory:** Full persistence of conversation state using In-Memory Checkpointing.
+*   **📂 Code:** [src/services/llm_service.py](backend-ai/src/services/llm_service.py)
 
-### 3. Asynchronous Ingestion Pipeline (Redis)
-To prevent blocking the main thread during heavy PDF processing, ingestion is decoupled using a Producer-Consumer pattern.
-*   **Producer:** Splits documents and pushes jobs to Redis.
-*   **Consumer (Worker):** Processes chunks and generates embeddings in the background.
-*   **📂 Code:** [backend-ai/src/workers/chunking_worker.py](backend-ai/src/workers/chunking_worker.py)
-*   **📂 Code:** [backend-ai/src/services/embedding_worker.py](backend-ai/src/services/embedding_worker.py)
+### 3. Hybrid Memory Layer (Mem0)
+Context is managed via **Mem0**, utilizing a dual-store approach:
+*   **Qdrant:** For semantic similarity search (Short-term/RAG context).
+*   **Neo4j:** For Graph Memory, mapping entity relationships (Long-term/Episodic memory).
+*   **📂 Code:** [src/db/mem0.py](backend-ai/src/db/mem0.py)
 
-### 4. Multimodal Capabilities (Voice)
-Native integration with Groq's STT (Whisper) and TTS (Orpheus) models for voice-enabled interaction.
-*   **📂 Code:** [backend-ai/src/services/voice_agent.py](backend-ai/src/services/voice_agent.py)
-
----
-
-## 🚀 Key Features
-
-*   **Stateful Orchestration:** Built on **LangGraph** to handle multi-turn conversations, maintaining state and history via persistence checkpoints.
-*   **Intelligent Routing:** Uses an LLM classifier to determine if a query requires external knowledge (RAG) or general reasoning.
-*   **Hybrid RAG:** Combines **Ollama embeddings** with **Qdrant** for high-precision retrieval.
-*   **Long-Term Memory:** "Remembers" user preferences and past interactions (factual, episodic, and semantic memory) using **Mem0**, enabling a personalized experience that improves over time.
-*   **Type Safety:** Strict configuration management using **Pydantic** patterns for environment and tool validation.
+### 4. Multimodal Layer (Voice)
+*   **Input:** **Whisper-Large-v3** (via Groq) for near-instant Speech-to-Text.
+*   **Output:** **Orpheus** for high-fidelity Text-to-Speech generation.
+*   **📂 Code:** [src/services/voice_agent.py](backend-ai/src/services/voice_agent.py)
 
 ---
 
 ## 🛠️ Tech Stack
 
-*   **Language:** Python 3.14
-*   **Orchestration:** LangGraph, LangChain
-*   **LLM & Inference:** OpenAI SDK (routed to Groq), Ollama
-*   **Databases:** 
-    *   **Qdrant** (Vector Store)
-    *   **Neo4j** (Graph Store)
-    *   **Redis** (Task Queue)
-*   **Frameworks:** FastAPI (API Layer), Pydantic
-*   **Infrastructure:** Docker
-
----
-
-## 🗺️ Roadmap & Status
-
-The backend core is architecturally complete. Current focus is on the API exposition layer and Frontend integration.
-
-- [x] **Agentic Workflow:** LangGraph implementation with conditional edges.
-- [x] **Memory System:** Mem0 integration with Neo4j and Qdrant.
-- [x] **Ingestion Pipeline:** Redis Queue setup and Worker logic.
-- [x] **Core Services:** LLM Client, Chunking, and Voice modules.
-- [x] **API Layer:** Finalizing FastAPI endpoints and SSE Streaming response.
-- [ ] **Frontend:** React + Vite UI with shadcn/ui (or maybe I'll try Next.js).
-- [ ] **Deployment:** Docker Compose orchestration.
-
+| Category | Technologies |
+| :--- | :--- |
+| **Backend** | Python 3.14, FastAPI, Pydantic |
+| **Orchestration** | LangGraph, LangChain |
+| **Databases** | **Qdrant** (Vector), **Neo4j** (Graph), **MongoDB** (User/Session), **Redis** (Queue/PubSub) |
+| **Storage** | MinIO (S3 Compatible Object Storage) |
+| **AI/Inference** | Groq (OpenAI GPT-OSS-120B, Llama 3, Whisper, Orpheus), Ollama (Embeddings), Tavily (Web Search) |
+| **Infrastructure** | Docker Compose, Redis Queue (RQ) |
