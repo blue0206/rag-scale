@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Iterator
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -18,11 +18,10 @@ os.makedirs(FILES_DIR, exist_ok=True)
 
 def load_file(
     user_id: str, batch_id: str, object_key: str, bucket_name: str
-) -> List[Document]:
+) -> Iterator[Document]:
     """
-    This function downloads the PDF file from S3 and temporarily saves to disk.
-    The saved file is loaded using PyPDFLoader and then deleted from disk.
-    The function returns the loaded document with user_id and batch_id stored in metadata.
+    This function downloads PDF from S3 and YIELDS pages one by one (Lazy Loading).
+    Crucial for memory efficiency with large files.
 
     This function accepts the following parameters:
     - user_id: ID of the user.
@@ -38,20 +37,22 @@ def load_file(
 
     s3_client.download_file(bucket=bucket_name, key=object_key, path=path)
 
-    print("File downloaded. Loading document.")
+    print("File downloaded. Loading documents lazily.")
+    try:
 
-    loader = PyPDFLoader(path)
-    docs = loader.load()
+        loader = PyPDFLoader(path)
 
-    os.remove(path)
-    print("Document loaded successfully. Temporary file removed.")
+        # Store user_id and batch_id in metadata for proper retrieval.
+        for doc in loader.lazy_load():
+            doc.metadata["user_id"] = user_id
+            doc.metadata["batch_id"] = batch_id
+            yield doc
 
-    # Store user_id and batch_id in metadata for proper retrieval.
-    for doc in docs:
-        doc.metadata["user_id"] = user_id
-        doc.metadata["batch_id"] = batch_id
-
-    return docs
+    except Exception as e:
+        print("Error streaming files from disk: ", e)
+    finally:
+        if os.path.exists(path):
+            os.remove(path)
 
 
 def split_file(docs: List[Document]) -> List[Document]:
@@ -87,23 +88,17 @@ def offload_chunks(user_id: str, batch_id: str, chunks: List[Document]) -> None:
 
     # Update status in batch tracking service.
     batch_tracking_service.increment_field(
-        batch_id=batch_id, field="files_chunked", delta=1
-    )
-    batch_tracking_service.increment_field(
         batch_id=batch_id, field="total_chunks", delta=n
     )
 
-    # Offload chunks in batches of 20 to embedding queue.
-    for i in range(0, n, 20):
-        chunk_subset = chunks[i : i + 20]
-
-        payloads = [
-            {"text": chunk.page_content, "metadata": chunk.metadata}
-            for chunk in chunk_subset
-        ]
-        queue_service.enqueue_embedding_job(
-            user_id=user_id, batch_id=batch_id, chunks=payloads
-        )
+    # Offload chunks to embedding queue.
+    payloads = [
+        {"text": chunk.page_content, "metadata": chunk.metadata}
+        for chunk in chunks
+    ]
+    queue_service.enqueue_embedding_job(
+        user_id=user_id, batch_id=batch_id, chunks=payloads
+    )
 
     print("All chunks offloaded to embedding queue.")
 
@@ -132,9 +127,26 @@ def chunk_pdf(data: ChunkingJob) -> None:
         return
 
     try:
-        docs = load_file(user_id, batch_id, object_key, bucket_name)
-        chunks = split_file(docs)
-        offload_chunks(user_id, batch_id, chunks)
+        BATCH_SIZE = 16
+        docs: List[Document] = []
+
+        for doc in load_file(user_id, batch_id, object_key, bucket_name):
+            docs.append(doc)
+
+            if len(docs) >= BATCH_SIZE:
+                chunks = split_file(docs)
+                offload_chunks(user_id, batch_id, chunks)
+                docs = []
+                
+        if docs:
+            chunks = split_file(docs)
+            offload_chunks(user_id, batch_id, docs)
+
+        # Since chunking worker processes one file at a time, we
+        # increment the value for files_chunked once whole process is over.
+        batch_tracking_service.increment_field(
+            batch_id=batch_id, field="files_chunked", delta=1
+        )
     except Exception as e:
         print(f"Error while chunking PDF: {str(e)}")
 
