@@ -14,10 +14,27 @@ from ..core.llm_client import llm_service
 from ..db.mem0 import mem0_client
 
 
+BASE_PROMPT_TEXT = """
+You are an expert AI Assistant. You will receive a user query and based on the query, return a helpful response.
+Make sure the output is properly structured and formatted.
+"""
+
+BASE_PROMPT_AUDIO = """
+You are an expert Voice AI Assistant. You will receive a transcript of user query
+based on which you should return a helpful response.
+
+Your response will be spoken to the user, so return it like a transcription.
+
+Use punctuation strategically. For example, ellipses (...) for hesitant or thoughtful pauses,
+and exclamation marks for excitement.
+
+Include "verbal cues" where required. Instead of just returning a sentence,
+you could start with "Oh!" or "Wow".
+"""
 
 
 async def stream_llm_response(
-    user_id: str, user_query: str
+    user_id: str, user_query: str, is_voice: bool
 ) -> AsyncGenerator[str, None]:
     """
     Invokes the langgraph workflow and streams the response as SSE.
@@ -30,6 +47,7 @@ async def stream_llm_response(
             "user_query": user_query,
             "messages": [],
             "query_type": None,
+            "is_voice": is_voice,
         }
     )
 
@@ -108,8 +126,7 @@ async def normal_query(state: State) -> State:
     user_context = "\n".join(f"- {mem}" for mem in mem_list)
 
     SYSTEM_PROMPT = f"""
-    You are an expert AI Assistant. 
-    You will receive a user query and based on the query, return a helpful response.
+    {BASE_PROMPT_AUDIO if state.get("is_voice") else BASE_PROMPT_TEXT}
 
     You have been given access to the tavily mcp server.
     If the query has a URL, or if you're unable to answer a query and need more data, use the MCP server.
@@ -199,10 +216,9 @@ async def retrieval_query(state: State) -> State:
     user_context = "\n".join(f"- {mem}" for mem in mem_list)
 
     SYSTEM_PROMPT = f"""
-    You are an expert AI Assistant. You will receive a user query.
-    You have to answer the query based on the document context provided.
+    {BASE_PROMPT_AUDIO if state.get("is_voice") else BASE_PROMPT_TEXT}
 
-    Note that the user query might a be text input by the user, or a transcript of their voice query.
+    You have to answer the query based on the document context provided.
 
     If applicable and available, also provide the page number where the answer is found.
     If context not available, try to answer the query based on your general knowledge, else return a helpful message.
