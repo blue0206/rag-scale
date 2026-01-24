@@ -32,9 +32,11 @@ Context is managed via **Mem0**, utilizing a dual-store approach:
 *   **📂 Code:** [src/db/mem0.py](backend-ai/src/db/mem0.py)
 
 ### 4. Multimodal Layer (Voice)
-*   **Input:** **Whisper-Large-v3** (via Groq) for near-instant Speech-to-Text.
-*   **Output:** **Orpheus** for high-fidelity Text-to-Speech generation.
-*   **📂 Code:** [src/services/voice_agent.py](backend-ai/src/services/voice_agent.py)
+Voice interaction is architected for low latency using a "side-channel" streaming pattern.
+- **STT:** User audio is transcribed using **ElevenLabs (scribe-v2)**.
+- **TTS:** LLM text tokens are streamed concurrently to the client (via SSE) and to the **ElevenLabs WebSocket API**.
+- **Audio Streaming:** The resulting audio chunks are buffered in **Redis Streams** and streamed to the client on a separate HTTP endpoint, preventing blockage of the primary SSE connection.
+- **📂 Code:** [src/services/tts_service.py](backend-ai/src/services/tts_service.py) & [src/services/streaming_service.py](backend-ai/src/services/streaming_service.py)
 
 ---
 
@@ -46,5 +48,5 @@ Context is managed via **Mem0**, utilizing a dual-store approach:
 | **Orchestration** | LangGraph, LangChain |
 | **Databases** | **Qdrant** (Vector), **Neo4j** (Graph), **MongoDB** (User/Session), **Redis** (Queue/PubSub) |
 | **Storage** | MinIO (S3 Compatible Object Storage) |
-| **AI/Inference** | Groq (OpenAI GPT-OSS-120B, Llama 3, Whisper, Orpheus), Ollama (Embeddings), Tavily (Web Search) |
+| **AI/Inference** | Groq (OpenAI GPT-OSS-120B, Llama 3), ElevenLabs (STT, TTS with WebScokets), Ollama (Embeddings), Tavily (Web Search) |
 | **Infrastructure** | Docker Compose, Redis Queue (RQ) |
