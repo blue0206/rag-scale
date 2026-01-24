@@ -12,6 +12,7 @@ class State(TypedDict):
     user_query: str
     messages: Annotated[ResponseInputParam, add]
     query_type: Optional[Literal["NORMAL", "RETRIEVAL"]]
+    is_voice: bool
 
 
 class ChatEvent(BaseModel):
