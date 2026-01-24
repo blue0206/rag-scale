@@ -47,15 +47,7 @@ async def classify_query(state: State) -> State:
     Makes an LLM call to classify the query as 'NORMAL' | 'RETRIEVAL'.
     """
 
-    # Search mem0 for user context.
-    mem_search = await mem0_client.search_memories(
-        user_query=state.get("user_query"), user_id=state.get("user_id")
-    )
-
-    mem_list = [entry.get("memory") for entry in mem_search.get("results", [])]
-    user_context = "\n".join(f"- {mem}" for mem in mem_list)
-
-    SYSTEM_PROMPT = f"""
+    SYSTEM_PROMPT = """
     You are a helpful AI Assistant. You will receive a user query and based on
     the query, return either of the following:
 
@@ -63,11 +55,6 @@ async def classify_query(state: State) -> State:
     'RETRIEVAL' - If the query is related to a document.
 
     If the query involves a URL and asks to visit a website or make a web search, it should be classified as 'NORMAL' query.
-
-    You are also provided with a context about the user:
-    {user_context}
-
-    Note that the user query might a be text input by the user, or a transcript of their voice query.
 
     In case you are unable to make out the type of query, return 'NORMAL'.
     """
