@@ -11,6 +11,7 @@ from src.db.s3 import s3_client
 from src.services.pubsub_service import pubsub_service
 from src.services.queue_service import queue_service
 from src.services.batch_tracking_service import batch_tracking_service
+from src.services.streaming_service import stream_service
 
 
 @asynccontextmanager
@@ -23,6 +24,7 @@ async def lifespan(_: FastAPI):
     queue_service.connect()
     batch_tracking_service.connect()
     await batch_tracking_service.connect_async()
+    await stream_service.connect()
     s3_client.connect()
 
     yield
@@ -33,6 +35,7 @@ async def lifespan(_: FastAPI):
     queue_service.disconnect()
     batch_tracking_service.disconnect()
     await batch_tracking_service.disconnect_async()
+    await stream_service.disconnect()
     s3_client.disconnect()
 
 app = FastAPI(lifespan=lifespan)
