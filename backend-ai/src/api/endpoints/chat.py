@@ -14,7 +14,7 @@ from ...db.mem0 import mem0_client
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
-@router.post("/chat/text")
+@router.post("/text")
 async def chat_handler(
     background_tasks: BackgroundTasks,
     req: Request,
@@ -38,7 +38,7 @@ async def chat_handler(
     )
 
 
-@router.post("/chat/voice")
+@router.post("/voice")
 async def voice_handler(
     background_tasks: BackgroundTasks,
     form: ChatForm = Depends(),
