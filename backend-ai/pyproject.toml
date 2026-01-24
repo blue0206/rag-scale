@@ -59,4 +59,5 @@ dependencies = [
     "types-boto3[essential]>=1.42.29",
     "pydantic-settings>=2.12.0",
     "rq>=2.6.1",
+    "elevenlabs>=2.31.0",
 ]
