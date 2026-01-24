@@ -13,16 +13,7 @@ from ..models.chat import State
 from ..core.llm_client import llm_service
 from ..db.mem0 import mem0_client
 
-embeddings = OllamaEmbeddings(
-    model=env_config.EMBEDDER_MODEL,
-    base_url="http://localhost:11434",
-)
 
-vector_db = QdrantVectorStore.from_existing_collection(
-    url="http://localhost:6333",
-    collection_name=env_config.RAG_COLLECTION_NAME,
-    embedding=embeddings,
-)
 
 
 async def stream_llm_response(
@@ -165,7 +156,6 @@ async def normal_query(state: State) -> State:
         response_text = ""
         async for chunk in stream:
             if chunk.type == "response.output_text.delta":
-                print(chunk.delta, end="")
                 response_text += chunk.delta
                 writer({"delta": chunk.delta})
 
@@ -180,6 +170,17 @@ async def retrieval_query(state: State) -> State:
     search to retrieve relevant data from vector database to answer the query.
     The retrieved data is then sent to the LLM to generate a response.
     """
+
+    embeddings = OllamaEmbeddings(
+        model=env_config.EMBEDDER_MODEL,
+        base_url="http://localhost:11434",
+    )
+
+    vector_db = QdrantVectorStore.from_existing_collection(
+        url="http://localhost:6333",
+        collection_name=env_config.RAG_COLLECTION_NAME,
+        embedding=embeddings,
+    )
 
     query_embedding = await get_query_embeddings(state.get("user_query"))
 
