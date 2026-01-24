@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     EMBEDDER_MODEL: str = "nomic-embed-text"
     # mem0
     MEM0_COLLECTION_NAME: str = "mem0_store"
+    # ElevenLabs
+    ELEVENLABS_API_KEY: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

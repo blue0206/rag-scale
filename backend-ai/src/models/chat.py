@@ -1,7 +1,10 @@
+from websockets import ClientConnection
+from asyncio import Task
 from operator import add
 from openai.types.responses import ResponseInputParam
 from pydantic import BaseModel
 from typing_extensions import TypedDict, Literal, Optional, Annotated
+from dataclasses import dataclass
 
 
 class State(TypedDict):
@@ -20,3 +23,9 @@ class StreamPayload(BaseModel):
     data: str
     status: Optional[Literal["Finished", "In Progress"]]
 
+
+@dataclass
+class TTSClient:
+    websocket: ClientConnection
+    receiver_task: Task
+    stream_id: str
